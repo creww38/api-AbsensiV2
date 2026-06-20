@@ -1,10 +1,25 @@
 // API-ABSENSIV2/services/exportService.js
 const Excel = require('exceljs');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { getSheetData } = require('./googleSheetsService');
 const { verifyToken } = require('./authService');
 const { getRealtime } = require('./monitoringService');
 const { formatDateToYMD } = require('../utils/dateHelper');
 const { addLog } = require('./logService');
+
+// Gunakan tempDir dari global (di-set di api/index.js) atau fallback ke os.tmpdir()
+const tempDir = global.tempDir || path.join(os.tmpdir(), 'absensi-temp');
+
+// Pastikan folder temp ada
+try {
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+} catch (e) {
+  // Silent fail - folder mungkin sudah ada
+}
 
 async function generateExcel(token, type, filters) {
   try {
@@ -376,15 +391,6 @@ async function exportAndSendToWhatsApp(token, type, filters) {
       return result;
     }
     
-    // Simpan file ke folder temp
-    const fs = require('fs');
-    const path = require('path');
-    const tempDir = path.join(__dirname, '..', 'temp');
-    
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
     const filePath = path.join(tempDir, result.fileName);
     fs.writeFileSync(filePath, result.buffer);
     
@@ -402,26 +408,26 @@ async function exportAndSendToWhatsApp(token, type, filters) {
 
 // Bersihkan file temporary yang lebih dari 1 jam
 setInterval(() => {
-  const fs = require('fs');
-  const path = require('path');
-  const tempDir = path.join(__dirname, '..', 'temp');
-  
-  if (fs.existsSync(tempDir)) {
-    const files = fs.readdirSync(tempDir);
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    
-    files.forEach(file => {
-      const filePath = path.join(tempDir, file);
-      try {
-        const stats = fs.statSync(filePath);
-        if (stats.mtimeMs < oneHourAgo) {
-          fs.unlinkSync(filePath);
-          console.log(`🧹 Deleted old temp file: ${file}`);
+  try {
+    if (fs.existsSync(tempDir)) {
+      const files = fs.readdirSync(tempDir);
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
+      
+      files.forEach(file => {
+        const filePath = path.join(tempDir, file);
+        try {
+          const stats = fs.statSync(filePath);
+          if (stats.mtimeMs < oneHourAgo) {
+            fs.unlinkSync(filePath);
+            console.log(`🧹 Deleted old temp file: ${file}`);
+          }
+        } catch (e) {
+          // File mungkin sudah dihapus
         }
-      } catch (e) {
-        // File mungkin sudah dihapus
-      }
-    });
+      });
+    }
+  } catch (e) {
+    // Folder mungkin tidak ada
   }
 }, 30 * 60 * 1000); // Every 30 minutes
 
