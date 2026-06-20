@@ -1,0 +1,185 @@
+//    █████╗ ██████╗ ██╗
+//   ██╔══██╗██╔══██╗██║
+//   ███████║██████╔╝██║
+//   ██╔══██║██╔═══╝ ██║
+//   ██║  ██║██║     ██║
+//   ╚═╝  ╚═╝╚═╝     ╚═╝
+//   █████╗ ██████╗ ███████╗███████╗███╗   ██╗███████╗██╗   ██╗██████╗ 
+//   ██╔══██╗██╔══██╗██╔════╝██╔════╝████╗  ██║██╔════╝██║   ██║╚════██╗
+//   ███████║██████╔╝███████╗█████╗  ██╔██╗ ██║███████╗██║   ██║ █████╔╝
+//   ██╔══██║██╔══██╗╚════██║██╔══╝  ██║╚██╗██║╚════██║╚██╗ ██╔╝██╔═══╝ 
+//   ██║  ██║██████╔╝███████║███████╗██║ ╚████║███████║ ╚████╔╝ ███████╗
+//   ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝  ╚═══╝  ╚══════╝
+//   API Absensi Sekolah v2.0
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
+const fs = require('fs');
+const path = require('path');
+
+// Import routes
+const authRoutes = require('../routes/auth');
+const sessionRoutes = require('../routes/session');
+const siswaRoutes = require('../routes/siswa');
+const guruRoutes = require('../routes/guru');
+const absensiRoutes = require('../routes/absensi');
+const monitoringRoutes = require('../routes/monitoring');
+const liburRoutes = require('../routes/libur');
+const configRoutes = require('../routes/config');
+const exportRoutes = require('../routes/export');
+const rekapRoutes = require('../routes/rekap');
+const izinRoutes = require('../routes/izin');
+const notificationRoutes = require('../routes/notification');
+const pengumumanRoutes = require('../routes/pengumuman');
+const feedbackRoutes = require('../routes/feedback');
+const docsRoutes = require('../routes/docs');
+const logRoutes = require('../routes/log');
+const whatsappRoutes = require('../routes/whatsapp');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ==========================================
+// MIDDLEWARE
+// ==========================================
+
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(compression());
+app.use(cors({ origin: '*', credentials: true, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const tempDir = path.join(__dirname, '..', 'temp');
+if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+app.use('/temp', express.static(tempDir));
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (req.path !== '/api/health') {
+      console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
+    }
+  });
+  next();
+});
+
+// ==========================================
+// RATE LIMITING
+// ==========================================
+
+const generalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: { success: false, message: 'Terlalu banyak permintaan' } });
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, skipSuccessfulRequests: true, message: { success: false, message: 'Terlalu banyak percobaan login' } });
+const apiLimiter = rateLimit({ windowMs: 1 * 60 * 1000, max: 30, message: { success: false, message: 'Terlalu banyak permintaan API' } });
+
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/absensi/scan', apiLimiter);
+
+// ==========================================
+// ROUTES
+// ==========================================
+
+app.use('/api/auth', authRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/siswa', siswaRoutes);
+app.use('/api/guru', guruRoutes);
+app.use('/api/absensi', absensiRoutes);
+app.use('/api/monitoring', monitoringRoutes);
+app.use('/api/libur', liburRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/export', exportRoutes);
+app.use('/api/rekap', rekapRoutes);
+app.use('/api/izin', izinRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/pengumuman', pengumumanRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/docs', docsRoutes);
+app.use('/api/logs', logRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+
+// ==========================================
+// HEALTH CHECK
+// ==========================================
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    uptime: process.uptime(),
+    uptimeFormatted: formatUptime(process.uptime()),
+    memory: {
+      heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + ' MB',
+      rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + ' MB'
+    },
+    node: process.version,
+    platform: process.platform
+  });
+});
+
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API Absensi Sekolah',
+    version: '2.0.0',
+    status: 'running',
+    uptime: formatUptime(process.uptime()),
+    endpoints: { health: '/api/health', auth: '/api/auth/login', siswa: '/api/siswa', absensi: '/api/absensi/scan', docs: '/api/docs' }
+  });
+});
+
+// ==========================================
+// 404 & ERROR HANDLER
+// ==========================================
+
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: `Endpoint tidak ditemukan: ${req.method} ${req.originalUrl}`, suggestion: 'Kunjungi /api/docs untuk dokumentasi API' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err.message);
+  const logDir = path.join(__dirname, '..', 'logs');
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+  const logFile = path.join(logDir, `error-${new Date().toISOString().split('T')[0]}.log`);
+  fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}\nError: ${err.message}\nStack: ${err.stack}\n\n`);
+  res.status(err.status || 500).json({ success: false, message: process.env.NODE_ENV === 'production' ? 'Terjadi kesalahan server' : err.message, errorId: Date.now().toString(36) });
+});
+
+// ==========================================
+// SERVER START
+// ==========================================
+
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log('');
+    console.log('╔══════════════════════════════════════════════════════╗');
+    console.log('║        📚 API ABSENSI SEKOLAH v2.0                  ║');
+    console.log('╚══════════════════════════════════════════════════════╝');
+    console.log(`  🚀 Server : http://localhost:${PORT}`);
+    console.log(`  📚 Docs   : http://localhost:${PORT}/api/docs`);
+    console.log(`  🏥 Health : http://localhost:${PORT}/api/health`);
+    console.log('');
+  });
+}
+
+function formatUptime(seconds) {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const parts = [];
+  if (days > 0) parts.push(`${days}h`);
+  if (hours > 0) parts.push(`${hours}j`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  parts.push(`${secs}d`);
+  return parts.join(' ');
+}
+
+module.exports = app;
