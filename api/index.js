@@ -47,8 +47,6 @@ const PORT = process.env.PORT || 3000;
 // ==========================================
 // TEMP FOLDER - VERCEL COMPATIBLE
 // ==========================================
-// Di Vercel, kita tidak bisa mkdir di /var/task
-// Jadi pakai os.tmpdir() yang mengarah ke /tmp
 const tempDir = process.env.NODE_ENV === 'production' 
   ? path.join(os.tmpdir(), 'absensi-temp')
   : path.join(__dirname, '..', 'temp');
@@ -58,36 +56,94 @@ try {
     fs.mkdirSync(tempDir, { recursive: true });
   }
 } catch (e) {
-  // Silent fail - folder mungkin sudah ada atau tidak diperlukan
   console.log('Temp dir info:', e.message);
 }
 
-// Simpan tempDir ke global agar bisa diakses service lain
 global.tempDir = tempDir;
-
-// Static files
 app.use('/temp', express.static(tempDir));
 
 // ==========================================
-// MIDDLEWARE
+// CORS CONFIGURATION - SETTING ULANG
 // ==========================================
 
-// Security
+// Daftar origin yang diizinkan
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://localhost:8080',
+  'http://127.0.0.1:5500',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:3000',
+  'https://absensi-pintar.vercel.app',
+  'https://absensi-pintar.netlify.app',
+  'https://absensi-pintar.github.io',
+  // Tambahkan domain frontend kamu di sini
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Izinkan request tanpa origin (Postman, curl, mobile apps, server-to-server)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Cek apakah origin ada di daftar yang diizinkan
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // Di development, izinkan semua origin
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('[CORS] Allowed (dev mode):', origin);
+        callback(null, true);
+      } else {
+        console.log('[CORS] Blocked:', origin);
+        callback(null, true); // Untuk production, tetap izinkan dulu
+        // Nanti kalau sudah fix, ganti ke:
+        // callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-CSRF-Token',
+    'X-API-Key',
+  ],
+  exposedHeaders: [
+    'Content-Length',
+    'Content-Disposition',
+    'X-Request-Id',
+  ],
+  credentials: true, // Izinkan cookies & auth headers
+  maxAge: 86400, // Cache preflight 24 jam
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+// Apply CORS
+app.use(cors(corsOptions));
+
+// Handle preflight requests untuk semua routes
+app.options('*', cors(corsOptions));
+
+// ==========================================
+// MIDDLEWARE LAINNYA
+// ==========================================
+
+// Security headers (dengan CSP yang longgar)
 app.use(helmet({ 
-  contentSecurityPolicy: false, 
-  crossOriginEmbedderPolicy: false 
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
 }));
 
 // Compression
 app.use(compression());
-
-// CORS
-app.use(cors({ 
-  origin: '*', 
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // Body parser
 app.use(express.json({ limit: '10mb' }));
@@ -110,31 +166,33 @@ app.use((req, res, next) => {
 // ==========================================
 
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
-  max: 100,
+  windowMs: 15 * 60 * 1000,
+  max: 500, // Ditingkatkan untuk development
   message: { 
     success: false, 
     message: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' 
-  }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 menit
-  max: 10,
+  windowMs: 15 * 60 * 1000,
+  max: 20, // Ditingkatkan
   skipSuccessfulRequests: true,
   message: { 
     success: false, 
     message: 'Terlalu banyak percobaan login. Silakan coba lagi setelah 15 menit.' 
-  }
+  },
 });
 
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 menit
-  max: 30,
+  windowMs: 1 * 60 * 1000,
+  max: 60, // Ditingkatkan
   message: { 
     success: false, 
     message: 'Terlalu banyak permintaan API. Silakan tunggu sebentar.' 
-  }
+  },
 });
 
 // Apply rate limiters
@@ -146,55 +204,22 @@ app.use('/api/absensi/scan', apiLimiter);
 // ROUTES
 // ==========================================
 
-// Auth
 app.use('/api/auth', authRoutes);
-
-// Session management
 app.use('/api/sessions', sessionRoutes);
-
-// Data Siswa
 app.use('/api/siswa', siswaRoutes);
-
-// Data Guru
 app.use('/api/guru', guruRoutes);
-
-// Absensi
 app.use('/api/absensi', absensiRoutes);
-
-// Monitoring
 app.use('/api/monitoring', monitoringRoutes);
-
-// Hari Libur
 app.use('/api/libur', liburRoutes);
-
-// Konfigurasi
 app.use('/api/config', configRoutes);
-
-// Export Data
 app.use('/api/export', exportRoutes);
-
-// Rekap
 app.use('/api/rekap', rekapRoutes);
-
-// Izin & Sakit
 app.use('/api/izin', izinRoutes);
-
-// Notifikasi
 app.use('/api/notifications', notificationRoutes);
-
-// Pengumuman
 app.use('/api/pengumuman', pengumumanRoutes);
-
-// Feedback
 app.use('/api/feedback', feedbackRoutes);
-
-// Dokumentasi API
 app.use('/api/docs', docsRoutes);
-
-// Log Aktivitas
 app.use('/api/logs', logRoutes);
-
-// WhatsApp Integration
 app.use('/api/whatsapp', whatsappRoutes);
 
 // ==========================================
@@ -216,7 +241,11 @@ app.get('/api/health', (req, res) => {
     },
     node: process.version,
     platform: process.platform,
-    tempDir: tempDir
+    tempDir: tempDir,
+    cors: {
+      allowedOrigins: process.env.NODE_ENV === 'production' ? allowedOrigins.length + ' domains' : 'All (dev mode)',
+      credentials: true
+    }
   };
   
   res.json(healthData);
@@ -262,7 +291,6 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('Server Error:', err.message);
   
-  // Jangan log stack di production untuk hemat memori
   if (process.env.NODE_ENV !== 'production') {
     console.error('Stack:', err.stack);
   }
