@@ -67,69 +67,28 @@ app.use('/temp', express.static(tempDir));
 // CORS CONFIGURATION - SETTING ULANG
 // ==========================================
 
-// Daftar origin yang diizinkan
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5500',
-  'http://localhost:8080',
-  'http://127.0.0.1:5500',
-  'http://127.0.0.1:8080',
-  'http://127.0.0.1:3000',
-  'https://absensi-pintar.vercel.app',
-  'https://absensi-pintar.netlify.app',
-  'https://absensi-pintar.github.io',
-  // Tambahkan domain frontend kamu di sini
-];
+/// ==========================================
+// CORS - PALING ATAS SEBELUM MIDDLEWARE LAIN
+// ==========================================
+app.use((req, res, next) => {
+  // Izinkan semua origin (untuk development)
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400');
+  
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Izinkan request tanpa origin (Postman, curl, mobile apps, server-to-server)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Cek apakah origin ada di daftar yang diizinkan
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      // Di development, izinkan semua origin
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('[CORS] Allowed (dev mode):', origin);
-        callback(null, true);
-      } else {
-        console.log('[CORS] Blocked:', origin);
-        callback(null, true); // Untuk production, tetap izinkan dulu
-        // Nanti kalau sudah fix, ganti ke:
-        // callback(new Error('Not allowed by CORS'));
-      }
-    }
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'X-CSRF-Token',
-    'X-API-Key',
-  ],
-  exposedHeaders: [
-    'Content-Length',
-    'Content-Disposition',
-    'X-Request-Id',
-  ],
-  credentials: true, // Izinkan cookies & auth headers
-  maxAge: 86400, // Cache preflight 24 jam
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-// Apply CORS
-app.use(cors(corsOptions));
-
-// Handle preflight requests untuk semua routes
-app.options('*', cors(corsOptions));
+// Setelah itu baru middleware lain
+app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
+app.use(compression());
 
 // ==========================================
 // MIDDLEWARE LAINNYA
