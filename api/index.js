@@ -40,6 +40,7 @@ const feedbackRoutes = require('../routes/feedback');
 const docsRoutes = require('../routes/docs');
 const logRoutes = require('../routes/log');
 const whatsappRoutes = require('../routes/whatsapp');
+const channelRoutes = require('../routes/channel');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -221,6 +222,7 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/docs', docsRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/channel', channelRoutes);
 
 // ==========================================
 // HEALTH CHECK
