@@ -23,6 +23,7 @@ const path = require('path');
 const os = require('os');
 
 // Import routes
+const corsMiddleware = require('./cors');
 const authRoutes = require('../routes/auth');
 const sessionRoutes = require('../routes/session');
 const siswaRoutes = require('../routes/siswa');
@@ -67,29 +68,33 @@ app.use('/temp', express.static(tempDir));
 // CORS CONFIGURATION - SETTING ULANG
 // ==========================================
 
-/// ==========================================
-// CORS - PALING ATAS SEBELUM MIDDLEWARE LAIN
 // ==========================================
-app.use((req, res, next) => {
-  // Izinkan semua origin (untuk development)
+// CORS PREFLIGHT HANDLER - HARUS PALING ATAS
+// ==========================================
+app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Max-Age', '86400');
+  return res.status(200).end();
+});
+
+// CORS untuk semua request
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
   
-  // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
   
   next();
 });
-
-// Setelah itu baru middleware lain
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(compression());
-
+app.use(corsMiddleware);
+// Setelah itu baru middleware lain...
 // ==========================================
 // MIDDLEWARE LAINNYA
 // ==========================================
