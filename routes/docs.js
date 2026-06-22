@@ -5,7 +5,7 @@
 //    ██║  ██║██║   ██║██║     ╚════██║
 //    ██████╔╝╚██████╔╝╚██████╗███████║
 //    ╚═════╝  ╚═════╝  ╚═════╝╚══════╝
-//    API Documentation - Redocly
+//    API Documentation - Redocly + Dark/Light Toggle
 
 const express = require('express');
 const router = express.Router();
@@ -14,1393 +14,556 @@ const packageInfo = require('../package.json');
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 // ==========================================
-// OPENAPI 3.1 SPEC
+// OPENAPI 3.1 SPEC (sama seperti sebelumnya)
 // ==========================================
 const openApiSpec = {
   openapi: '3.1.0',
   info: {
     title: 'API Absensi Sekolah',
     version: packageInfo.version || '2.0.0',
-    description: 'Backend API untuk sistem absensi sekolah berbasis QR Code, WhatsApp, dan Google Sheets.\n\n**Fitur Utama:**\n- Absensi masuk/pulang dengan NISN atau Nama\n- Monitoring realtime per kelas\n- Pengajuan izin/sakit dengan notifikasi WhatsApp\n- Export laporan ke Excel\n- Manajemen siswa & guru\n- Integrasi WhatsApp Gateway & Bot',
-    contact: {
-      name: 'Developer',
-      url: 'https://github.com/Creww38/Api-AbsensiV3'
-    }
+    description: '## Backend API Sistem Absensi Sekolah\n\nSistem absensi berbasis **QR Code**, **WhatsApp Bot**, dan **Google Sheets**.\n\n### Fitur\n- Absensi masuk/pulang dengan NISN atau Nama\n- Monitoring realtime per kelas\n- Pengajuan izin/sakit dengan notifikasi WhatsApp\n- Export laporan ke Excel\n- Manajemen siswa & guru\n- Integrasi WhatsApp Gateway & Bot\n- Channel berita otomatis\n\n### Autentikasi\n1. Login di `POST /api/auth/login`\n2. Copy token dari response\n3. Klik tombol **Authorize** di sidebar\n4. Paste dengan format: `Bearer <token>`',
+    contact: { name: 'Developer', url: 'https://github.com/Creww38/Api-AbsensiV2' }
   },
-  servers: [
-    {
-      url: BASE_URL,
-      description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Local Development'
-    }
-  ],
+  servers: [{ url: BASE_URL, description: process.env.NODE_ENV === 'production' ? 'Production' : 'Local Development' }],
   security: [{ bearerAuth: [] }],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Masukkan token JWT dari response login. Format: `Bearer <token>`'
-      }
-    },
-    schemas: {
-      SuccessResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean', example: true },
-          message: { type: 'string', example: 'Operasi berhasil' }
-        }
-      },
-      ErrorResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean', example: false },
-          message: { type: 'string', example: 'Pesan error' }
-        }
-      },
-      LoginRequest: {
-        type: 'object',
-        properties: {
-          username: { type: 'string', example: 'admin', description: 'Username (untuk guru/admin)' },
-          password: { type: 'string', example: 'admin123', description: 'Password (untuk guru/admin)' },
-          nisn: { type: 'string', example: '1234567890', description: 'NISN atau Nama (untuk siswa)' }
-        }
-      },
-      LoginResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean' },
-          token: { type: 'string', description: 'JWT Token' },
-          role: { type: 'string', enum: ['admin', 'guru', 'siswa'] },
-          nama: { type: 'string' },
-          username: { type: 'string' },
-          kelas: { type: 'string' }
-        }
-      },
-      AbsenScanRequest: {
-        type: 'object',
-        required: ['nisn'],
-        properties: {
-          nisn: { type: 'string', description: 'NISN atau Nama siswa', example: '1234567890' },
-          scannerRole: { type: 'string', enum: ['guru', 'admin'], description: 'Role yang melakukan scan' },
-          scannerKelas: { type: 'string', description: 'Kelas scanner (untuk validasi)' }
-        }
-      },
-      IzinCreateRequest: {
-        type: 'object',
-        required: ['jenis', 'tanggalMulai'],
-        properties: {
-          jenis: { type: 'string', enum: ['izin', 'sakit'], example: 'sakit' },
-          keterangan: { type: 'string', example: 'Demam' },
-          tanggalMulai: { type: 'string', format: 'date', example: '2025-01-15' },
-          tanggalAkhir: { type: 'string', format: 'date', example: '2025-01-16' }
-        }
-      }
+      bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'Format: `Bearer <token>`' }
     }
   },
   paths: {
-    // ==========================================
-    // AUTH
-    // ==========================================
+    // ── AUTH ──
     '/api/auth/login': {
       post: {
-        tags: ['Auth'],
-        summary: 'Login (Guru/Admin/Siswa)',
-        description: 'Login untuk semua role. Guru/Admin pakai username & password. Siswa pakai NISN atau Nama.',
+        tags: ['Auth'], summary: 'Login', operationId: 'authLogin',
+        description: 'Login untuk semua role.\n\n**Guru/Admin:** username & password.\n**Siswa:** NISN atau Nama.',
         security: [],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/LoginRequest' }
-            }
-          }
-        },
-        responses: {
-          '200': { description: 'Login berhasil', content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } } },
-          '401': { description: 'Kredensial salah' }
-        }
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { username: { type: 'string', example: 'admin', description: 'Untuk guru/admin' }, password: { type: 'string', example: 'admin123', description: 'Untuk guru/admin' }, nisn: { type: 'string', example: '1234567890', description: 'NISN atau Nama lengkap (siswa)' } } } } } },
+        responses: { '200': { description: 'Login berhasil' }, '401': { description: 'Kredensial salah' } }
       }
     },
-    '/api/auth/logout': {
-      post: {
-        tags: ['Auth'],
-        summary: 'Logout',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Logout berhasil' } }
-      }
-    },
-    '/api/auth/verify': {
-      get: {
-        tags: ['Auth'],
-        summary: 'Verifikasi Token',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Token valid' } }
-      }
-    },
+    '/api/auth/logout': { post: { tags: ['Auth'], summary: 'Logout', operationId: 'authLogout', responses: { '200': { description: 'Berhasil logout' } } } },
+    '/api/auth/verify': { get: { tags: ['Auth'], summary: 'Verify Token', operationId: 'authVerify', responses: { '200': { description: 'Token valid' } } } },
 
-    // ==========================================
-    // ABSENSI
-    // ==========================================
+    // ── ABSENSI ──
     '/api/absensi/scan': {
       post: {
-        tags: ['Absensi'],
-        summary: 'Scan Absensi Masuk/Pulang',
-        description: 'Scan absensi siswa menggunakan NISN atau Nama. Otomatis mendeteksi absen masuk atau pulang.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/AbsenScanRequest' }
-            }
-          }
-        },
-        responses: { '200': { description: 'Hasil scan' } }
+        tags: ['Absensi'], summary: 'Scan Absensi', operationId: 'absensiScan',
+        description: 'Scan absensi masuk/pulang. Sistem otomatis mendeteksi apakah ini absen masuk atau pulang berdasarkan data yang sudah ada.',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nisn'], properties: { nisn: { type: 'string', example: '1234567890', description: 'NISN atau Nama siswa' }, scannerRole: { type: 'string', enum: ['guru', 'admin'], description: 'Role petugas scan' }, scannerKelas: { type: 'string', description: 'Kelas scanner (validasi)' } } } } } },
+        responses: { '200': { description: 'Hasil scan absensi' } }
       }
     },
-    '/api/absensi/today/{nisn}': {
-      get: {
-        tags: ['Absensi'],
-        summary: 'Cek Absensi Hari Ini',
-        parameters: [
-          { name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN Siswa' }
-        ],
-        responses: { '200': { description: 'Data absensi hari ini' } }
-      }
-    },
+    '/api/absensi/today/{nisn}': { get: { tags: ['Absensi'], summary: 'Cek Absensi Hari Ini', operationId: 'absensiToday', parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN Siswa' }], responses: { '200': { description: 'Data absensi hari ini' } } } },
     '/api/absensi/list': {
       get: {
-        tags: ['Absensi'],
-        summary: 'List Absensi (dengan filter)',
+        tags: ['Absensi'], summary: 'List Absensi', operationId: 'absensiList',
         parameters: [
           { name: 'tanggalMulai', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Format: YYYY-MM-DD' },
-          { name: 'tanggalAkhir', in: 'query', schema: { type: 'string', format: 'date' } },
-          { name: 'kelas', in: 'query', schema: { type: 'string' } },
-          { name: 'nisn', in: 'query', schema: { type: 'string' } },
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['Hadir', 'Sakit', 'Izin', 'Alpa'] } }
+          { name: 'tanggalAkhir', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Format: YYYY-MM-DD' },
+          { name: 'kelas', in: 'query', schema: { type: 'string' }, description: 'Filter kelas' },
+          { name: 'nisn', in: 'query', schema: { type: 'string' }, description: 'Filter NISN' },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['Hadir', 'Sakit', 'Izin', 'Alpa'] }, description: 'Filter status' }
         ],
         responses: { '200': { description: 'List data absensi' } }
       }
     },
 
-    // ==========================================
-    // MONITORING
-    // ==========================================
-    '/api/monitoring/realtime': {
-      get: {
-        tags: ['Monitoring'],
-        summary: 'Monitoring Realtime',
-        description: 'Melihat status absensi seluruh siswa hari ini secara realtime.',
-        parameters: [
-          { name: 'kelas', in: 'query', schema: { type: 'string' }, description: 'Filter kelas (opsional)' }
-        ],
-        responses: { '200': { description: 'Data monitoring realtime' } }
-      }
-    },
-    '/api/monitoring/status': {
-      put: {
-        tags: ['Monitoring'],
-        summary: 'Update Status Manual',
-        description: 'Mengubah status absensi siswa secara manual (misal: jadi Sakit/Izin/Alpa).',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['nisn', 'nama', 'kelas', 'status'],
-                properties: {
-                  nisn: { type: 'string' },
-                  nama: { type: 'string' },
-                  kelas: { type: 'string' },
-                  status: { type: 'string', enum: ['Hadir', 'Sakit', 'Izin', 'Alpa'] }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Status berhasil diubah' } }
-      }
-    },
+    // ── MONITORING ──
+    '/api/monitoring/realtime': { get: { tags: ['Monitoring'], summary: 'Monitoring Realtime', operationId: 'monitoringRealtime', parameters: [{ name: 'kelas', in: 'query', schema: { type: 'string' }, description: 'Filter kelas (opsional)' }], responses: { '200': { description: 'Data monitoring realtime' } } } },
+    '/api/monitoring/status': { put: { tags: ['Monitoring'], summary: 'Update Status Manual', operationId: 'monitoringUpdate', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nisn', 'nama', 'kelas', 'status'], properties: { nisn: { type: 'string' }, nama: { type: 'string' }, kelas: { type: 'string' }, status: { type: 'string', enum: ['Hadir', 'Sakit', 'Izin', 'Alpa'] } } } } } }, responses: { '200': { description: 'Status berhasil diubah' } } } },
 
-    // ==========================================
-    // SISWA
-    // ==========================================
+    // ── SISWA ──
     '/api/siswa': {
-      get: {
-        tags: ['Siswa'],
-        summary: 'List Semua Siswa',
-        responses: { '200': { description: 'List data siswa' } }
-      },
-      post: {
-        tags: ['Siswa'],
-        summary: 'Tambah Siswa Baru',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['nama', 'nisn'],
-                properties: {
-                  nama: { type: 'string', example: 'Ahmad Fauzi' },
-                  nisn: { type: 'string', example: '1234567890' },
-                  jenisKelamin: { type: 'string', example: 'Laki-laki' },
-                  tanggalLahir: { type: 'string', example: '2005-06-15' },
-                  agama: { type: 'string', example: 'Islam' },
-                  namaAyah: { type: 'string', example: 'Budi' },
-                  namaIbu: { type: 'string', example: 'Siti' },
-                  noHp: { type: 'string', example: '08123456789' },
-                  kelas: { type: 'string', example: 'XII IPA 1' },
-                  alamat: { type: 'string', example: 'Jl. Merdeka No. 10' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Siswa berhasil ditambahkan' } }
-      }
+      get: { tags: ['Siswa'], summary: 'List Semua Siswa', operationId: 'siswaList', responses: { '200': { description: 'List data siswa' } } },
+      post: { tags: ['Siswa'], summary: 'Tambah Siswa', operationId: 'siswaCreate', description: '**Admin only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nama', 'nisn'], properties: { nama: { type: 'string', example: 'Ahmad Fauzi' }, nisn: { type: 'string', example: '1234567890' }, jenisKelamin: { type: 'string', example: 'Laki-laki' }, tanggalLahir: { type: 'string', example: '2005-06-15' }, agama: { type: 'string', example: 'Islam' }, namaAyah: { type: 'string', example: 'Budi' }, namaIbu: { type: 'string', example: 'Siti' }, noHp: { type: 'string', example: '08123456789' }, kelas: { type: 'string', example: 'XII IPA 1' }, alamat: { type: 'string', example: 'Jl. Merdeka No. 10' } } } } } }, responses: { '200': { description: 'Siswa ditambahkan' } } }
     },
-    '/api/siswa/kelas': {
-      get: {
-        tags: ['Siswa'],
-        summary: 'List Kelas Tersedia',
-        responses: { '200': { description: 'List kelas unik' } }
-      }
-    },
+    '/api/siswa/kelas': { get: { tags: ['Siswa'], summary: 'List Kelas', operationId: 'siswaKelas', responses: { '200': { description: 'List kelas unik' } } } },
     '/api/siswa/{nisn}': {
-      get: {
-        tags: ['Siswa'],
-        summary: 'Detail Siswa by NISN',
-        parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { '200': { description: 'Detail siswa' } }
-      },
-      put: {
-        tags: ['Siswa'],
-        summary: 'Update Data Siswa',
-        description: 'Admin only',
-        parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
-        responses: { '200': { description: 'Siswa berhasil diupdate' } }
-      },
-      delete: {
-        tags: ['Siswa'],
-        summary: 'Hapus Siswa',
-        description: 'Admin only',
-        parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { '200': { description: 'Siswa berhasil dihapus' } }
-      }
+      get: { tags: ['Siswa'], summary: 'Detail Siswa', operationId: 'siswaDetail', parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN' }], responses: { '200': { description: 'Detail siswa' } } },
+      put: { tags: ['Siswa'], summary: 'Update Siswa', operationId: 'siswaUpdate', description: '**Admin only**', parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN lama' }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } }, responses: { '200': { description: 'Siswa diupdate' } } },
+      delete: { tags: ['Siswa'], summary: 'Hapus Siswa', operationId: 'siswaDelete', description: '**Admin only**', parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN' }], responses: { '200': { description: 'Siswa dihapus' } } }
     },
-    '/api/siswa/import/bulk': {
-      post: {
-        tags: ['Siswa'],
-        summary: 'Import Banyak Siswa',
-        description: 'Admin only. Body berupa array of object siswa.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    nama: { type: 'string' },
-                    nisn: { type: 'string' },
-                    kelas: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Import selesai' } }
-      }
-    },
+    '/api/siswa/import/bulk': { post: { tags: ['Siswa'], summary: 'Import Bulk', operationId: 'siswaImport', description: '**Admin only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'array', items: { type: 'object', properties: { nama: { type: 'string' }, nisn: { type: 'string' }, kelas: { type: 'string' } } } } } } }, responses: { '200': { description: 'Import selesai' } } } },
 
-    // ==========================================
-    // GURU
-    // ==========================================
+    // ── GURU ──
     '/api/guru': {
-      get: {
-        tags: ['Guru'],
-        summary: 'List Semua Guru',
-        description: 'Admin only',
-        responses: { '200': { description: 'List data guru' } }
-      },
-      post: {
-        tags: ['Guru'],
-        summary: 'Tambah Guru Baru',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['username', 'password'],
-                properties: {
-                  username: { type: 'string', example: 'guru1' },
-                  password: { type: 'string', example: 'pass123', minLength: 6 },
-                  kelas: { type: 'string', example: 'XII IPA 1' },
-                  nama: { type: 'string', example: 'Budi Santoso, S.Pd.' },
-                  noHp: { type: 'string', example: '08123456789' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Guru berhasil ditambahkan' } }
-      }
+      get: { tags: ['Guru'], summary: 'List Guru', operationId: 'guruList', description: '**Admin only**', responses: { '200': { description: 'List data guru' } } },
+      post: { tags: ['Guru'], summary: 'Tambah Guru', operationId: 'guruCreate', description: '**Admin only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['username', 'password'], properties: { username: { type: 'string', example: 'guru1' }, password: { type: 'string', example: 'pass123', minLength: 6 }, kelas: { type: 'string', example: 'XII IPA 1' }, nama: { type: 'string', example: 'Budi Santoso, S.Pd.' }, noHp: { type: 'string', example: '08123456789' } } } } } }, responses: { '200': { description: 'Guru ditambahkan' } } }
     },
     '/api/guru/{username}': {
-      put: {
-        tags: ['Guru'],
-        summary: 'Update Data Guru',
-        description: 'Admin only',
-        parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' } }],
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
-        responses: { '200': { description: 'Guru berhasil diupdate' } }
-      },
-      delete: {
-        tags: ['Guru'],
-        summary: 'Hapus Guru',
-        description: 'Admin only',
-        parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' } }],
-        responses: { '200': { description: 'Guru berhasil dihapus' } }
-      }
-    },
-    '/api/guru/import/bulk': {
-      post: {
-        tags: ['Guru'],
-        summary: 'Import Banyak Guru',
-        description: 'Admin only',
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'array', items: { type: 'object' } } } } },
-        responses: { '200': { description: 'Import selesai' } }
-      }
+      put: { tags: ['Guru'], summary: 'Update Guru', operationId: 'guruUpdate', description: '**Admin only**', parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' }, description: 'Username lama' }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } }, responses: { '200': { description: 'Guru diupdate' } } },
+      delete: { tags: ['Guru'], summary: 'Hapus Guru', operationId: 'guruDelete', description: '**Admin only**', parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' }, description: 'Username' }], responses: { '200': { description: 'Guru dihapus' } } }
     },
 
-    // ==========================================
-    // IZIN
-    // ==========================================
-    '/api/izin/create': {
-      post: {
-        tags: ['Izin/Sakit'],
-        summary: 'Ajukan Izin/Sakit',
-        description: 'Siswa only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/IzinCreateRequest' }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pengajuan berhasil' } }
-      }
-    },
-    '/api/izin/create-whatsapp': {
-      post: {
-        tags: ['Izin/Sakit'],
-        summary: 'Ajukan Izin dari WhatsApp',
-        description: 'Guru/Admin only (untuk bot WA)',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['nisn', 'jenis', 'tanggalMulai'],
-                properties: {
-                  nisn: { type: 'string' },
-                  jenis: { type: 'string', enum: ['izin', 'sakit'] },
-                  keterangan: { type: 'string' },
-                  tanggalMulai: { type: 'string', format: 'date' },
-                  tanggalAkhir: { type: 'string', format: 'date' },
-                  nama: { type: 'string' },
-                  kelas: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pengajuan berhasil' } }
-      }
-    },
-    '/api/izin/my': {
-      get: {
-        tags: ['Izin/Sakit'],
-        summary: 'List Izin Saya',
-        description: 'Siswa only',
-        responses: { '200': { description: 'List pengajuan izin' } }
-      }
-    },
-    '/api/izin/list': {
-      get: {
-        tags: ['Izin/Sakit'],
-        summary: 'List Semua Izin',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'List semua pengajuan izin' } }
-      }
-    },
-    '/api/izin/pending': {
-      get: {
-        tags: ['Izin/Sakit'],
-        summary: 'List Izin Pending',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'List izin pending' } }
-      }
-    },
-    '/api/izin/stats': {
-      get: {
-        tags: ['Izin/Sakit'],
-        summary: 'Statistik Izin',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'Statistik pengajuan izin' } }
-      }
-    },
-    '/api/izin/{id}/approve': {
-      put: {
-        tags: ['Izin/Sakit'],
-        summary: 'Setujui Izin',
-        description: 'Guru/Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID pengajuan izin' }],
-        responses: { '200': { description: 'Izin disetujui' } }
-      }
-    },
-    '/api/izin/{id}/reject': {
-      put: {
-        tags: ['Izin/Sakit'],
-        summary: 'Tolak Izin',
-        description: 'Guru/Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Izin ditolak' } }
-      }
-    },
-    '/api/izin/whatsapp/{id}/approve': {
-      put: {
-        tags: ['Izin/Sakit'],
-        summary: 'Setujui Izin via WhatsApp',
-        description: 'Guru/Admin only. Approve dari bot WhatsApp.',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['approverName'],
-                properties: { approverName: { type: 'string', example: 'Budi Santoso' } }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Izin disetujui via WA' } }
-      }
-    },
-    '/api/izin/whatsapp/{id}/reject': {
-      put: {
-        tags: ['Izin/Sakit'],
-        summary: 'Tolak Izin via WhatsApp',
-        description: 'Guru/Admin only. Reject dari bot WhatsApp.',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['rejectorName'],
-                properties: { rejectorName: { type: 'string', example: 'Budi Santoso' } }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Izin ditolak via WA' } }
-      }
-    },
+    // ── IZIN ──
+    '/api/izin/create': { post: { tags: ['Izin / Sakit'], summary: 'Ajukan Izin', operationId: 'izinCreate', description: '**Siswa only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['jenis', 'tanggalMulai'], properties: { jenis: { type: 'string', enum: ['izin', 'sakit'], example: 'sakit' }, keterangan: { type: 'string', example: 'Demam' }, tanggalMulai: { type: 'string', format: 'date', example: '2025-01-15' }, tanggalAkhir: { type: 'string', format: 'date', example: '2025-01-16' } } } } } }, responses: { '200': { description: 'Pengajuan berhasil' } } } },
+    '/api/izin/list': { get: { tags: ['Izin / Sakit'], summary: 'List Semua Izin', operationId: 'izinList', description: '**Guru/Admin**', responses: { '200': { description: 'List pengajuan izin' } } } },
+    '/api/izin/pending': { get: { tags: ['Izin / Sakit'], summary: 'Izin Pending', operationId: 'izinPending', description: '**Guru/Admin**', responses: { '200': { description: 'List izin pending' } } } },
+    '/api/izin/{id}/approve': { put: { tags: ['Izin / Sakit'], summary: 'Setujui Izin', operationId: 'izinApprove', description: '**Guru/Admin**', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID pengajuan' }], responses: { '200': { description: 'Izin disetujui' } } } },
+    '/api/izin/{id}/reject': { put: { tags: ['Izin / Sakit'], summary: 'Tolak Izin', operationId: 'izinReject', description: '**Guru/Admin**', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID pengajuan' }], responses: { '200': { description: 'Izin ditolak' } } } },
 
-    // ==========================================
-    // REKAP
-    // ==========================================
-    '/api/rekap/periode': {
-      get: {
-        tags: ['Rekap'],
-        summary: 'Rekap Per Periode',
-        description: 'Guru/Admin only',
-        parameters: [
-          { name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
-          { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
-          { name: 'kelas', in: 'query', schema: { type: 'string' } }
-        ],
-        responses: { '200': { description: 'Data rekap per periode' } }
-      }
-    },
-    '/api/rekap/siswa': {
-      get: {
-        tags: ['Rekap'],
-        summary: 'Rekap Per Siswa',
-        description: 'Guru/Admin only',
-        parameters: [
-          { name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
-          { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
-          { name: 'nisn', in: 'query', required: true, schema: { type: 'string' } }
-        ],
-        responses: { '200': { description: 'Data rekap per siswa' } }
-      }
-    },
+    // ── REKAP ──
+    '/api/rekap/periode': { get: { tags: ['Rekap'], summary: 'Rekap Per Periode', operationId: 'rekapPeriode', description: '**Guru/Admin**', parameters: [{ name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } }, { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } }, { name: 'kelas', in: 'query', schema: { type: 'string' } }], responses: { '200': { description: 'Data rekap' } } } },
+    '/api/rekap/siswa': { get: { tags: ['Rekap'], summary: 'Rekap Per Siswa', operationId: 'rekapSiswa', description: '**Guru/Admin**', parameters: [{ name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } }, { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } }, { name: 'nisn', in: 'query', required: true, schema: { type: 'string' } }], responses: { '200': { description: 'Data rekap' } } } },
 
-    // ==========================================
-    // EXPORT
-    // ==========================================
-    '/api/export/excel': {
-      post: {
-        tags: ['Export'],
-        summary: 'Export ke Excel',
-        description: 'Guru/Admin only. Response berupa file .xlsx',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['type'],
-                properties: {
-                  type: { type: 'string', enum: ['absensi', 'monitoring', 'rekap', 'siswa', 'guru'] },
-                  filters: { type: 'object' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': { description: 'File Excel', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } }
-        }
-      }
-    },
-    '/api/export/send-whatsapp': {
-      post: {
-        tags: ['Export'],
-        summary: 'Export & Simpan untuk WhatsApp',
-        description: 'Guru/Admin only',
-        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
-        responses: { '200': { description: 'File tersimpan' } }
-      }
-    },
-    '/api/export/types': {
-      get: {
-        tags: ['Export'],
-        summary: 'List Tipe Export',
-        responses: { '200': { description: 'List tipe export tersedia' } }
-      }
-    },
+    // ── EXPORT ──
+    '/api/export/excel': { post: { tags: ['Export'], summary: 'Export Excel', operationId: 'exportExcel', description: '**Guru/Admin**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['type'], properties: { type: { type: 'string', enum: ['absensi', 'monitoring', 'rekap', 'siswa', 'guru'] }, filters: { type: 'object' } } } } } }, responses: { '200': { description: 'File .xlsx' } } } },
+    '/api/export/types': { get: { tags: ['Export'], summary: 'Tipe Export', operationId: 'exportTypes', responses: { '200': { description: 'List tipe' } } } },
 
-    // ==========================================
-    // KONFIGURASI
-    // ==========================================
+    // ── CONFIG ──
     '/api/config': {
-      get: {
-        tags: ['Konfigurasi'],
-        summary: 'Lihat Konfigurasi',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'Data konfigurasi' } }
-      },
-      put: {
-        tags: ['Konfigurasi'],
-        summary: 'Update Konfigurasi',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  jam_masuk_mulai: { type: 'string', example: '06:00' },
-                  jam_masuk_akhir: { type: 'string', example: '07:15' },
-                  jam_pulang_mulai: { type: 'string', example: '15:00' },
-                  jam_pulang_akhir: { type: 'string', example: '17:00' },
-                  nama_sekolah: { type: 'string' },
-                  semester: { type: 'string' },
-                  tahun_ajaran: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Konfigurasi diupdate' } }
-      }
+      get: { tags: ['Config'], summary: 'Lihat Config', operationId: 'configGet', description: '**Guru/Admin**', responses: { '200': { description: 'Data konfigurasi' } } },
+      put: { tags: ['Config'], summary: 'Update Config', operationId: 'configUpdate', description: '**Admin only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { jam_masuk_mulai: { type: 'string', example: '06:00' }, jam_masuk_akhir: { type: 'string', example: '07:15' }, jam_pulang_mulai: { type: 'string', example: '15:00' }, jam_pulang_akhir: { type: 'string', example: '17:00' }, nama_sekolah: { type: 'string' }, semester: { type: 'string' }, tahun_ajaran: { type: 'string' } } } } } }, responses: { '200': { description: 'Config diupdate' } } }
     },
 
-    // ==========================================
-    // LIBUR
-    // ==========================================
+    // ── LIBUR ──
     '/api/libur': {
-      get: {
-        tags: ['Libur'],
-        summary: 'List Hari Libur',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'List hari libur' } }
-      },
-      post: {
-        tags: ['Libur'],
-        summary: 'Tambah Hari Libur',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['tanggal'],
-                properties: {
-                  tanggal: { type: 'string', format: 'date', example: '2025-01-01' },
-                  keterangan: { type: 'string', example: 'Tahun Baru' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Hari libur ditambahkan' } }
-      }
+      get: { tags: ['Libur'], summary: 'List Libur', operationId: 'liburList', description: '**Guru/Admin**', responses: { '200': { description: 'List hari libur' } } },
+      post: { tags: ['Libur'], summary: 'Tambah Libur', operationId: 'liburCreate', description: '**Admin only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['tanggal'], properties: { tanggal: { type: 'string', format: 'date', example: '2025-01-01' }, keterangan: { type: 'string', example: 'Tahun Baru' } } } } } }, responses: { '200': { description: 'Libur ditambahkan' } } }
     },
-    '/api/libur/{tanggal}': {
-      delete: {
-        tags: ['Libur'],
-        summary: 'Hapus Hari Libur',
-        description: 'Admin only',
-        parameters: [{ name: 'tanggal', in: 'path', required: true, schema: { type: 'string' }, description: 'Format: YYYY-MM-DD' }],
-        responses: { '200': { description: 'Hari libur dihapus' } }
-      }
-    },
+    '/api/libur/{tanggal}': { delete: { tags: ['Libur'], summary: 'Hapus Libur', operationId: 'liburDelete', description: '**Admin only**', parameters: [{ name: 'tanggal', in: 'path', required: true, schema: { type: 'string' }, description: 'YYYY-MM-DD' }], responses: { '200': { description: 'Libur dihapus' } } } },
 
-    // ==========================================
-    // NOTIFIKASI
-    // ==========================================
-    '/api/notifications': {
-      get: {
-        tags: ['Notifikasi'],
-        summary: 'List Notifikasi Saya',
-        responses: { '200': { description: 'List notifikasi' } }
-      }
-    },
-    '/api/notifications/{id}/read': {
-      put: {
-        tags: ['Notifikasi'],
-        summary: 'Tandai Dibaca',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Notifikasi ditandai dibaca' } }
-      }
-    },
+    // ── NOTIFICATIONS ──
+    '/api/notifications': { get: { tags: ['Notifications'], summary: 'List Notifikasi', operationId: 'notifList', responses: { '200': { description: 'List notifikasi' } } } },
+    '/api/notifications/{id}/read': { put: { tags: ['Notifications'], summary: 'Tandai Dibaca', operationId: 'notifRead', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID notifikasi' }], responses: { '200': { description: 'Notifikasi ditandai' } } } },
 
-    // ==========================================
-    // PENGUMUMAN
-    // ==========================================
+    // ── PENGUMUMAN ──
     '/api/pengumuman': {
-      get: {
-        tags: ['Pengumuman'],
-        summary: 'List Semua Pengumuman',
-        responses: { '200': { description: 'List pengumuman' } }
-      },
-      post: {
-        tags: ['Pengumuman'],
-        summary: 'Buat Pengumuman Baru',
-        description: 'Guru/Admin only. Akan dikirim ke WhatsApp grup.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['judul', 'isi'],
-                properties: {
-                  judul: { type: 'string', example: 'Pengumuman Penting' },
-                  isi: { type: 'string', example: 'Besok libur...' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pengumuman dibuat dan dikirim ke WhatsApp' } }
-      }
+      get: { tags: ['Pengumuman'], summary: 'List Pengumuman', operationId: 'pengumumanList', responses: { '200': { description: 'List pengumuman' } } },
+      post: { tags: ['Pengumuman'], summary: 'Buat Pengumuman', operationId: 'pengumumanCreate', description: '**Guru/Admin** — Otomatis kirim ke WhatsApp grup.', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['judul', 'isi'], properties: { judul: { type: 'string', example: 'Libur Besok' }, isi: { type: 'string', example: 'Diberitahukan bahwa...' } } } } } }, responses: { '200': { description: 'Pengumuman dibuat' } } }
     },
-    '/api/pengumuman/active': {
-      get: {
-        tags: ['Pengumuman'],
-        summary: 'List Pengumuman Aktif',
-        security: [],
-        responses: { '200': { description: 'List pengumuman aktif' } }
-      }
-    },
-    '/api/pengumuman/from-whatsapp': {
-      get: {
-        tags: ['Pengumuman'],
-        summary: 'List Pengumuman dari WhatsApp',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'List pengumuman dari WA' } }
-      },
-      post: {
-        tags: ['Pengumuman'],
-        summary: 'Simpan Pengumuman dari WhatsApp',
-        description: 'Guru/Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['judul', 'isi'],
-                properties: {
-                  judul: { type: 'string' },
-                  isi: { type: 'string' },
-                  pengirim: { type: 'string' },
-                  role: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pengumuman disimpan' } }
-      }
-    },
-    '/api/pengumuman/stats': {
-      get: {
-        tags: ['Pengumuman'],
-        summary: 'Statistik Pengumuman',
-        description: 'Guru/Admin only',
-        responses: { '200': { description: 'Statistik pengumuman' } }
-      }
-    },
-    '/api/pengumuman/{id}/activate': {
-      put: {
-        tags: ['Pengumuman'],
-        summary: 'Aktifkan Pengumuman',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Pengumuman diaktifkan' } }
-      }
-    },
-    '/api/pengumuman/{id}/deactivate': {
-      put: {
-        tags: ['Pengumuman'],
-        summary: 'Nonaktifkan Pengumuman',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Pengumuman dinonaktifkan' } }
-      }
-    },
-    '/api/pengumuman/{id}': {
-      delete: {
-        tags: ['Pengumuman'],
-        summary: 'Hapus Pengumuman',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Pengumuman dihapus' } }
-      }
-    },
+    '/api/pengumuman/active': { get: { tags: ['Pengumuman'], summary: 'Pengumuman Aktif', operationId: 'pengumumanActive', security: [], responses: { '200': { description: 'List pengumuman aktif' } } } },
 
-    // ==========================================
-    // FEEDBACK
-    // ==========================================
+    // ── FEEDBACK ──
     '/api/feedback': {
-      get: {
-        tags: ['Feedback'],
-        summary: 'List Feedback (Admin)',
-        description: 'Admin/Guru only',
-        responses: { '200': { description: 'List feedback' } }
-      },
-      post: {
-        tags: ['Feedback'],
-        summary: 'Kirim Feedback',
-        description: 'Siswa only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['pesan'],
-                properties: {
-                  kategori: { type: 'string', example: 'umum' },
-                  pesan: { type: 'string', minLength: 5, example: 'Aplikasi sangat membantu...' },
-                  rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Feedback terkirim' } }
-      }
-    },
-    '/api/feedback/my': {
-      get: {
-        tags: ['Feedback'],
-        summary: 'Feedback Saya',
-        description: 'Siswa only',
-        responses: { '200': { description: 'List feedback pribadi' } }
-      }
-    },
-    '/api/feedback/{id}/read': {
-      put: {
-        tags: ['Feedback'],
-        summary: 'Tandai Feedback Dibaca',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Feedback ditandai dibaca' } }
-      }
+      get: { tags: ['Feedback'], summary: 'List Feedback', operationId: 'feedbackList', description: '**Admin/Guru**', responses: { '200': { description: 'List feedback' } } },
+      post: { tags: ['Feedback'], summary: 'Kirim Feedback', operationId: 'feedbackCreate', description: '**Siswa only**', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['pesan'], properties: { kategori: { type: 'string', example: 'umum' }, pesan: { type: 'string', minLength: 5, example: 'Aplikasi sangat membantu!' }, rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 } } } } } }, responses: { '200': { description: 'Feedback terkirim' } } }
     },
 
-    // ==========================================
-    // SESSION
-    // ==========================================
-    '/api/sessions/my': {
-      get: {
-        tags: ['Session'],
-        summary: 'List Session Aktif',
-        responses: { '200': { description: 'List session' } }
-      }
-    },
-    '/api/sessions/revoke-all': {
-      post: {
-        tags: ['Session'],
-        summary: 'Hapus Semua Session Lain',
-        description: 'Menghapus semua session kecuali yang sedang digunakan.',
-        responses: { '200': { description: 'Session lain dihapus' } }
-      }
-    },
-    '/api/sessions/logout-all': {
-      post: {
-        tags: ['Session'],
-        summary: 'Logout Semua Device',
-        description: 'Logout dari semua device termasuk yang sedang digunakan.',
-        responses: { '200': { description: 'Semua session dihapus' } }
-      }
-    },
+    // ── SESSION ──
+    '/api/sessions/my': { get: { tags: ['Session'], summary: 'Sesi Aktif', operationId: 'sessionMy', responses: { '200': { description: 'List sesi' } } } },
+    '/api/sessions/logout-all': { post: { tags: ['Session'], summary: 'Logout Semua', operationId: 'sessionLogoutAll', responses: { '200': { description: 'Semua sesi dihapus' } } } },
 
-    // ==========================================
-    // LOGS
-    // ==========================================
-    '/api/logs': {
-      get: {
-        tags: ['Logs'],
-        summary: 'List Log Aktivitas',
-        description: 'Admin only',
-        parameters: [
-          { name: 'kategori', in: 'query', schema: { type: 'string' } },
-          { name: 'aksi', in: 'query', schema: { type: 'string' } },
-          { name: 'userId', in: 'query', schema: { type: 'string' } },
-          { name: 'tanggalMulai', in: 'query', schema: { type: 'string', format: 'date' } },
-          { name: 'tanggalAkhir', in: 'query', schema: { type: 'string', format: 'date' } },
-          { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } }
-        ],
-        responses: { '200': { description: 'List log' } }
-      }
-    },
-    '/api/logs/stats': {
-      get: {
-        tags: ['Logs'],
-        summary: 'Statistik Log',
-        description: 'Admin only',
-        responses: { '200': { description: 'Statistik log' } }
-      }
-    },
-    '/api/logs/my': {
-      get: {
-        tags: ['Logs'],
-        summary: 'Log Aktivitas Saya',
-        parameters: [
-          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
-        ],
-        responses: { '200': { description: 'List log pribadi' } }
-      }
-    },
-    '/api/logs/cleanup': {
-      post: {
-        tags: ['Logs'],
-        summary: 'Bersihkan Log Lama',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  daysToKeep: { type: 'integer', default: 90, example: 30 }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Log dibersihkan' } }
-      }
-    },
-    '/api/logs/categories': {
-      get: {
-        tags: ['Logs'],
-        summary: 'List Kategori Log',
-        description: 'Admin only',
-        responses: { '200': { description: 'List kategori & aksi log' } }
-      }
-    },
+    // ── LOGS ──
+    '/api/logs': { get: { tags: ['Logs'], summary: 'List Log', operationId: 'logsList', description: '**Admin only**', parameters: [{ name: 'kategori', in: 'query', schema: { type: 'string' } }, { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } }], responses: { '200': { description: 'List log' } } } },
 
-    // ==========================================
-    // CHANNEL
-    // ==========================================
+    // ── CHANNEL ──
     '/api/channel': {
-      get: {
-        tags: ['Channel'],
-        summary: 'List Berita Channel',
-        security: [],
-        parameters: [
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['aktif', 'nonaktif', 'all'] }, description: 'Default: aktif' },
-          { name: 'search', in: 'query', schema: { type: 'string' } },
-          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
-        ],
-        responses: { '200': { description: 'List berita channel' } }
-      },
-      post: {
-        tags: ['Channel'],
-        summary: 'Simpan Berita Channel',
-        description: 'Admin/Guru only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['judul', 'isi'],
-                properties: {
-                  judul: { type: 'string' },
-                  isi: { type: 'string' },
-                  sumber: { type: 'string', example: 'WhatsApp Channel' },
-                  gambar: { type: 'string' },
-                  link: { type: 'string' },
-                  tanggal: { type: 'string', format: 'date' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Berita disimpan' } }
-      }
-    },
-    '/api/channel/all': {
-      get: {
-        tags: ['Channel'],
-        summary: 'List Semua Berita (Admin)',
-        description: 'Admin/Guru only',
-        responses: { '200': { description: 'List semua berita' } }
-      }
-    },
-    '/api/channel/stats': {
-      get: {
-        tags: ['Channel'],
-        summary: 'Statistik Channel',
-        description: 'Admin only',
-        responses: { '200': { description: 'Statistik channel' } }
-      }
-    },
-    '/api/channel/{id}/share': {
-      get: {
-        tags: ['Channel'],
-        summary: 'Link Share Berita',
-        security: [],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Link share untuk berbagai platform' } }
-      }
-    },
-    '/api/channel/{id}/publish/status': {
-      post: {
-        tags: ['Channel'],
-        summary: 'Publish ke Status WhatsApp',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Berita dipublish ke status WA' } }
-      }
-    },
-    '/api/channel/{id}/publish/group': {
-      post: {
-        tags: ['Channel'],
-        summary: 'Publish ke Grup WhatsApp',
-        description: 'Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Berita dipublish ke grup WA' } }
-      }
-    },
-    '/api/channel/{id}/publish/social': {
-      post: {
-        tags: ['Channel'],
-        summary: 'Auto-Post ke Media Sosial',
-        description: 'Admin only. Platform: facebook, twitter, telegram',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['platform'],
-                properties: {
-                  platform: { type: 'string', enum: ['facebook', 'twitter', 'telegram'], example: 'telegram' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Berita dipost ke media sosial' } }
-      }
+      get: { tags: ['Channel'], summary: 'List Berita', operationId: 'channelList', security: [], parameters: [{ name: 'search', in: 'query', schema: { type: 'string' } }], responses: { '200': { description: 'List berita' } } },
+      post: { tags: ['Channel'], summary: 'Simpan Berita', operationId: 'channelCreate', description: '**Admin/Guru** — Juga dipanggil oleh bot WA.', requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['judul', 'isi'], properties: { judul: { type: 'string' }, isi: { type: 'string' }, sumber: { type: 'string', example: 'WhatsApp Channel' }, gambar: { type: 'string' } } } } } }, responses: { '200': { description: 'Berita disimpan' } } }
     },
 
-    // ==========================================
-    // WHATSAPP BOT
-    // ==========================================
-    '/api/whatsapp/status': {
-      get: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Status Koneksi WhatsApp',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Status koneksi WhatsApp' } }
-      }
-    },
-    '/api/whatsapp/qr': {
-      get: {
-        tags: ['WhatsApp Bot'],
-        summary: 'QR Code Login WhatsApp',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'QR Code untuk scan' } }
-      }
-    },
-    '/api/whatsapp/init': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Inisialisasi Ulang Bot',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Bot diinisialisasi ulang' } }
-      }
-    },
-    '/api/whatsapp/send': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Kirim Pesan WhatsApp',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumber', 'message'],
-                properties: {
-                  phoneNumber: { type: 'string', example: '08123456789' },
-                  message: { type: 'string', example: 'Halo dari sistem' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pesan terkirim' } }
-      }
-    },
-    '/api/whatsapp/send-bulk': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Kirim Pesan Massal',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumbers', 'message'],
-                properties: {
-                  phoneNumbers: { type: 'array', items: { type: 'string' }, example: ['08123456789', '08198765432'] },
-                  message: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Hasil pengiriman massal' } }
-      }
-    },
-    '/api/whatsapp/send-to-kelas': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Kirim Pesan ke Siswa per Kelas',
-        description: 'Guru/Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['kelas', 'message'],
-                properties: {
-                  kelas: { type: 'string', example: 'XII IPA 1' },
-                  message: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Hasil pengiriman' } }
-      }
-    },
-    '/api/whatsapp/send-to-all': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Broadcast ke Semua Siswa',
-        description: 'Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['message'],
-                properties: {
-                  message: { type: 'string' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Hasil broadcast' } }
-      }
-    },
-    '/api/whatsapp/queue': {
-      get: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Lihat Antrian Notifikasi WA',
-        description: 'Admin only',
-        security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'List antrian notifikasi' } }
-      }
-    },
-    '/api/whatsapp/queue/{id}': {
-      put: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Update Status Antrian WA',
-        description: 'Admin only. Dipanggil oleh bot WhatsApp.',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['status'],
-                properties: {
-                  status: { type: 'string', enum: ['sent', 'failed', 'pending'], example: 'sent' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Status antrian diupdate' } }
-      }
-    },
-    '/api/whatsapp/send-notification': {
-      post: {
-        tags: ['WhatsApp Bot'],
-        summary: 'Tambah ke Antrian Notifikasi WA',
-        description: 'Guru/Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumber', 'message'],
-                properties: {
-                  phoneNumber: { type: 'string', example: '08123456789' },
-                  message: { type: 'string', example: 'Pesan dari sistem' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Notifikasi masuk antrian' } }
-      }
-    },
+    // ── WHATSAPP ──
+    '/api/whatsapp/queue': { get: { tags: ['WhatsApp Bot'], summary: 'Antrian Notif', operationId: 'waQueue', description: '**Admin only**', responses: { '200': { description: 'List antrian' } } } },
+    '/api/whatsapp/queue/{id}': { put: { tags: ['WhatsApp Bot'], summary: 'Update Antrian', operationId: 'waQueueUpdate', parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }], requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['status'], properties: { status: { type: 'string', enum: ['sent', 'failed', 'pending'] } } } } } }, responses: { '200': { description: 'Status updated' } } } },
 
-    // ==========================================
-    // HEALTH
-    // ==========================================
-    '/api/health': {
-      get: {
-        tags: ['System'],
-        summary: 'Health Check',
-        security: [],
-        responses: { '200': { description: 'Status server' } }
-      }
-    }
+    // ── HEALTH ──
+    '/api/health': { get: { tags: ['System'], summary: 'Health Check', operationId: 'health', security: [], responses: { '200': { description: 'Server OK' } } } }
   }
 };
 
 // ==========================================
-// REDOCLY PAGE
+// REDOCLY + DARK/LIGHT TOGGLE
 // ==========================================
 router.get('/', (req, res) => {
   const specJson = JSON.stringify(openApiSpec);
 
   const html = `<!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Absensi Sekolah - Documentation</title>
+    <title>API Docs — Absensi Sekolah</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ══════════════════════════════════════ */
+        /* SHADCN/UI DESIGN TOKENS              */
+        /* ══════════════════════════════════════ */
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222.2 84% 4.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 222.2 84% 4.9%;
+            --primary: 222.2 47.4% 11.2%;
+            --primary-foreground: 210 40% 98%;
+            --secondary: 210 40% 96.1%;
+            --secondary-foreground: 222.2 47.4% 11.2%;
+            --muted: 210 40% 96.1%;
+            --muted-foreground: 215.4 16.3% 46.9%;
+            --accent: 210 40% 96.1%;
+            --accent-foreground: 222.2 47.4% 11.2%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 214.3 31.8% 91.4%;
+            --input: 214.3 31.8% 91.4%;
+            --ring: 222.2 84% 4.9%;
+            --radius: 0.5rem;
+            --topbar-bg: 255 255 255;
+        }
+
+        .dark {
+            --background: 222.2 84% 4.9%;
+            --foreground: 210 40% 98%;
+            --card: 222.2 84% 4.9%;
+            --card-foreground: 210 40% 98%;
+            --primary: 210 40% 98%;
+            --primary-foreground: 222.2 47.4% 11.2%;
+            --secondary: 217.2 32.6% 17.5%;
+            --secondary-foreground: 210 40% 98%;
+            --muted: 217.2 32.6% 17.5%;
+            --muted-foreground: 215 20.2% 65.1%;
+            --accent: 217.2 32.6% 17.5%;
+            --accent-foreground: 210 40% 98%;
+            --destructive: 0 62.8% 30.6%;
+            --destructive-foreground: 210 40% 98%;
+            --border: 217.2 32.6% 17.5%;
+            --input: 217.2 32.6% 17.5%;
+            --ring: 212.7 26.8% 83.9%;
+            --topbar-bg: 2 4 9;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0f172a; }
-        
-        /* Top bar */
+
+        body {
+            background: hsl(var(--background));
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: hsl(var(--foreground));
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ══════════════════════════════════════ */
+        /* TOPBAR                                */
+        /* ══════════════════════════════════════ */
         .topbar {
-            background: #1e293b;
-            padding: 12px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #334155;
+            padding: 0 24px;
+            height: 56px;
+            border-bottom: 1px solid hsl(var(--border));
+            background: hsl(var(--background) / 0.85);
+            backdrop-filter: blur(12px);
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
-        .topbar h1 {
-            color: #e2e8f0;
-            font-size: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .topbar-logo {
+            width: 34px; height: 34px;
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 700;
+            transition: background 0.3s ease;
         }
-        .topbar .badge {
-            background: #22c55e20;
-            color: #22c55e;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-family: monospace;
+        .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+        .topbar-version {
+            font-size: 11px; font-weight: 500;
+            padding: 2px 10px; border-radius: 999px;
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            font-family: 'JetBrains Mono', monospace;
         }
-        .topbar .links {
+        .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+        /* ── DARK/LIGHT TOGGLE ── */
+        .theme-toggle {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            background: hsl(var(--secondary));
+            border: 1px solid hsl(var(--border));
+            border-radius: 999px;
+            padding: 3px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 0;
         }
-        .topbar .links a {
-            color: #94a3b8;
+        .theme-toggle:hover { border-color: hsl(var(--ring)); }
+        .theme-toggle-btn {
+            width: 32px; height: 28px;
+            border-radius: 999px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: hsl(var(--muted-foreground));
+        }
+        .theme-toggle-btn.active {
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+
+        .topbar-link {
+            font-size: 12px; font-weight: 500;
+            padding: 6px 14px; border-radius: var(--radius);
             text-decoration: none;
-            font-size: 12px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 5px 12px;
-            border-radius: 6px;
-            border: 1px solid #334155;
-            transition: all 0.2s;
+            color: hsl(var(--muted-foreground));
+            border: 1px solid hsl(var(--border));
+            transition: all 0.15s ease;
         }
-        .topbar .links a:hover {
-            background: #334155;
-            color: #e2e8f0;
+        .topbar-link:hover {
+            background: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+            border-color: hsl(var(--ring));
         }
-        
-        /* Redoc container */
-        #redoc-container {
-            height: calc(100vh - 49px);
+
+        /* ══════════════════════════════════════ */
+        /* REDOC CONTAINER                       */
+        /* ══════════════════════════════════════ */
+        #redoc-container { height: calc(100vh - 56px); }
+
+        /* ══════════════════════════════════════ */
+        /* REDOC OVERRIDES                       */
+        /* ══════════════════════════════════════ */
+        .redoc-wrap .menu-content {
+            background: hsl(var(--card)) !important;
+            border-right: 1px solid hsl(var(--border)) !important;
+            transition: background 0.3s ease, border-color 0.3s ease !important;
         }
+        .redoc-wrap .menu-content label {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important; font-size: 11px !important;
+            text-transform: uppercase !important; letter-spacing: 0.05em !important;
+            color: hsl(var(--muted-foreground)) !important;
+            padding: 16px 20px 8px !important;
+        }
+        .redoc-wrap .menu-content li {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 500 !important; font-size: 13px !important;
+            padding: 6px 20px !important; margin: 2px 8px !important;
+            border-radius: 6px !important;
+            transition: all 0.15s ease !important;
+            color: hsl(var(--foreground)) !important;
+        }
+        .redoc-wrap .menu-content li:hover {
+            background: hsl(var(--accent)) !important;
+            color: hsl(var(--accent-foreground)) !important;
+        }
+        .redoc-wrap .menu-content li.active {
+            background: hsl(var(--secondary)) !important;
+            color: hsl(var(--secondary-foreground)) !important;
+            font-weight: 600 !important;
+        }
+
+        .redoc-wrap .api-content {
+            background: hsl(var(--background)) !important;
+            padding: 32px 48px !important;
+            transition: background 0.3s ease !important;
+        }
+        .redoc-wrap .api-content h1 {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 800 !important; font-size: 28px !important;
+            letter-spacing: -0.03em !important; margin-bottom: 8px !important;
+            color: hsl(var(--foreground)) !important;
+        }
+        .redoc-wrap .api-content h2 {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 700 !important; font-size: 18px !important;
+            letter-spacing: -0.02em !important;
+            margin-top: 32px !important; padding-bottom: 12px !important;
+            border-bottom: 1px solid hsl(var(--border)) !important;
+            color: hsl(var(--foreground)) !important;
+        }
+        .redoc-wrap .api-content h3 {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important; font-size: 15px !important;
+            margin-top: 20px !important; color: hsl(var(--foreground)) !important;
+        }
+        .redoc-wrap .api-content p, .redoc-wrap .api-content li {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 14px !important; line-height: 1.7 !important;
+            color: hsl(var(--foreground)) !important;
+        }
+
+        /* Operation cards */
+        .redoc-wrap .operation {
+            background: hsl(var(--card)) !important;
+            border: 1px solid hsl(var(--border)) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+            margin-bottom: 16px !important; overflow: hidden !important;
+            transition: all 0.15s ease !important;
+        }
+        .redoc-wrap .operation:hover {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+        }
+
+        /* HTTP Methods */
+        .redoc-wrap .http-method {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 600 !important; font-size: 11px !important;
+            padding: 3px 10px !important; border-radius: 6px !important;
+        }
+        .redoc-wrap .http-method.get    { background: #dcfce7 !important; color: #166534 !important; }
+        .redoc-wrap .http-method.post   { background: #dbeafe !important; color: #1e40af !important; }
+        .redoc-wrap .http-method.put    { background: #fef3c7 !important; color: #92400e !important; }
+        .redoc-wrap .http-method.delete { background: #fee2e2 !important; color: #991b1b !important; }
+        .redoc-wrap .http-method.patch  { background: #f3e8ff !important; color: #6b21a8 !important; }
+
+        /* Code */
+        .redoc-wrap code, .redoc-wrap pre {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 12px !important;
+            background: hsl(var(--secondary)) !important;
+            border: 1px solid hsl(var(--border)) !important;
+            border-radius: var(--radius) !important;
+            padding: 2px 6px !important;
+        }
+        .redoc-wrap pre { padding: 16px !important; }
+
+        /* Response badges */
+        .redoc-wrap .response-col_status {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: 600 !important; font-size: 12px !important;
+            padding: 2px 8px !important; border-radius: 6px !important;
+        }
+
+        /* Auth button */
+        .redoc-wrap .auth-button {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important; font-size: 13px !important;
+            padding: 8px 16px !important; border-radius: var(--radius) !important;
+            background: hsl(var(--primary)) !important;
+            color: hsl(var(--primary-foreground)) !important;
+            border: 1px solid hsl(var(--primary)) !important;
+            transition: all 0.15s ease !important; cursor: pointer !important;
+        }
+        .redoc-wrap .auth-button:hover { opacity: 0.9 !important; }
+
+        /* Try button */
+        .redoc-wrap .try-button {
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 500 !important; font-size: 12px !important;
+            padding: 6px 14px !important; border-radius: var(--radius) !important;
+            background: hsl(var(--secondary)) !important;
+            color: hsl(var(--secondary-foreground)) !important;
+            border: 1px solid hsl(var(--border)) !important;
+            cursor: pointer !important; transition: all 0.15s ease !important;
+        }
+
+        /* Inputs */
+        .redoc-wrap input, .redoc-wrap textarea, .redoc-wrap select {
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 13px !important;
+            border: 1px solid hsl(var(--input)) !important;
+            border-radius: var(--radius) !important;
+            padding: 8px 12px !important;
+            background: hsl(var(--background)) !important;
+            color: hsl(var(--foreground)) !important;
+            outline: none !important;
+        }
+        .redoc-wrap input:focus, .redoc-wrap textarea:focus, .redoc-wrap select:focus {
+            border-color: hsl(var(--ring)) !important;
+            box-shadow: 0 0 0 2px hsl(var(--ring) / 0.3) !important;
+        }
+
+        /* Links */
+        .redoc-wrap a {
+            color: hsl(var(--primary)) !important;
+            font-weight: 500 !important;
+            text-decoration: underline !important;
+            text-underline-offset: 4px !important;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
     </style>
 </head>
 <body>
-    <!-- TOP BAR -->
+    <!-- ══════════════════════════════════════ -->
+    <!-- TOPBAR                                 -->
+    <!-- ══════════════════════════════════════ -->
     <div class="topbar">
-        <div style="display:flex;align-items:center;gap:10px;">
-            <h1>API Absensi Sekolah</h1>
-            <span class="badge">v${packageInfo.version || '2.0.0'}</span>
+        <div class="topbar-left">
+            <div class="topbar-logo">A</div>
+            <span class="topbar-title">API Absensi Sekolah</span>
+            <span class="topbar-version">v${packageInfo.version || '2.0.0'}</span>
         </div>
-        <div class="links">
-            <a href="/api/docs/json" target="_blank">JSON Spec</a>
-            <a href="/api/docs/download" target="_blank">Download</a>
-            <a href="/api/health" target="_blank">Health</a>
+        <div class="topbar-right">
+            <!-- ── DARK / LIGHT TOGGLE ── -->
+            <div class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">
+                <button class="theme-toggle-btn active" data-theme="dark" aria-label="Dark mode">🌙</button>
+                <button class="theme-toggle-btn" data-theme="light" aria-label="Light mode">☀️</button>
+            </div>
+            
+            <a href="/api/docs/json" target="_blank" class="topbar-link">JSON</a>
+            <a href="/api/docs/download" target="_blank" class="topbar-link">Download</a>
+            <a href="/api/health" target="_blank" class="topbar-link">Health</a>
         </div>
     </div>
 
-    <!-- REDOC -->
+    <!-- ══════════════════════════════════════ -->
+    <!-- REDOC                                  -->
+    <!-- ══════════════════════════════════════ -->
     <div id="redoc-container"></div>
 
     <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
     <script>
+        // ══════════════════════════════════════
+        // THEME TOGGLE
+        // ══════════════════════════════════════
+        const html = document.documentElement;
+        const toggleBtns = document.querySelectorAll('.theme-toggle-btn');
+        
+        // Cek localStorage
+        const savedTheme = localStorage.getItem('api-docs-theme') || 'dark';
+        html.className = savedTheme;
+        updateToggleButtons(savedTheme);
+
+        toggleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                html.className = theme;
+                localStorage.setItem('api-docs-theme', theme);
+                updateToggleButtons(theme);
+            });
+        });
+
+        function updateToggleButtons(activeTheme) {
+            toggleBtns.forEach(btn => {
+                if (btn.dataset.theme === activeTheme) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // ══════════════════════════════════════
+        // REDOC INIT
+        // ══════════════════════════════════════
         Redoc.init(
             ${specJson},
             {
-                scrollYOffset: 50,
-                hideDownloadButton: false,
+                scrollYOffset: 56,
+                hideDownloadButton: true,
                 expandResponses: "200",
                 nativeScrollbars: true,
                 pathInMiddlePanel: true,
                 hideLoading: false,
                 disableSearch: false,
                 onlyRequiredInSamples: true,
+                sortTagsAlphabetically: false,
                 theme: {
-                    colors: {
-                        primary: { main: '#3b82f6' },
-                        success: { main: '#22c55e' },
-                        error: { main: '#ef4444' },
-                        warning: { main: '#f59e0b' },
-                        text: {
-                            primary: '#e2e8f0',
-                            secondary: '#94a3b8'
-                        },
-                        border: {
-                            dark: '#334155',
-                            light: '#1e293b'
-                        },
-                        http: {
-                            get: '#22c55e',
-                            post: '#3b82f6',
-                            put: '#f59e0b',
-                            delete: '#ef4444',
-                            patch: '#a78bfa'
-                        }
-                    },
-                    schema: {
-                        nestedBackground: '#1e293b',
-                        linesColor: '#334155',
-                        defaultDetailsWidth: '100%',
-                        typeNameColor: '#e2e8f0',
-                        typeTitleColor: '#94a3b8',
-                        requireLabelColor: '#ef4444',
-                        labelsTextSize: '13px'
-                    },
                     typography: {
                         fontSize: '14px',
                         lineHeight: '1.6',
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                        headings: {
-                            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                            fontWeight: '600'
-                        },
-                        code: {
-                            fontSize: '13px',
-                            fontFamily: "'Fira Code', 'Consolas', monospace",
-                            backgroundColor: '#0f172a',
-                            color: '#e2e8f0'
-                        }
+                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+                        headings: { fontFamily: "'Inter', sans-serif", fontWeight: '700' },
+                        code: { fontSize: '12px', fontFamily: "'JetBrains Mono', monospace", fontWeight: '500' }
                     },
-                    menu: {
-                        backgroundColor: '#1e293b',
-                        textColor: '#e2e8f0',
-                        groupItems: {
-                            textTransform: 'uppercase',
-                            fontSize: '12px'
-                        }
-                    },
-                    rightPanel: {
-                        backgroundColor: '#0f172a',
-                        textColor: '#e2e8f0'
-                    },
-                    sidebar: {
-                        backgroundColor: '#1e293b',
-                        textColor: '#e2e8f0',
-                        activeTextColor: '#3b82f6',
-                        width: '260px'
-                    }
+                    sidebar: { width: '260px' }
                 }
             },
             document.getElementById('redoc-container')
@@ -1413,16 +576,7 @@ router.get('/', (req, res) => {
   res.send(html);
 });
 
-// ==========================================
-// JSON SPEC
-// ==========================================
-router.get('/json', (req, res) => {
-  res.json(openApiSpec);
-});
-
-// ==========================================
-// DOWNLOAD OPENAPI SPEC
-// ==========================================
+router.get('/json', (req, res) => { res.json(openApiSpec); });
 router.get('/download', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Disposition', 'attachment; filename="openapi-spec.json"');
