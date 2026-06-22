@@ -4,7 +4,7 @@
 //   ██╔══██║██║   ██║   ██║   ██╔══██║
 //   ██║  ██║╚██████╔╝   ██║   ██║  ██║
 //   ╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝
-//   Auth Service - Dengan Fallback .env
+//   Auth Service - Login Siswa Bisa Pakai Nama
 
 const jwt = require('jsonwebtoken');
 const { getSheetData } = require('./googleSheetsService');
@@ -23,35 +23,114 @@ async function login(username, password, nisn) {
     let loginMethod = '';
 
     // ==========================================
-    // LOGIN VIA NISN (SISWA)
+    // LOGIN VIA NISN atau NAMA (SISWA)
     // ==========================================
     if (nisn) {
       loginMethod = 'nisn';
-      const searchNisn = String(nisn).trim();
+      const searchTerm = String(nisn).trim();
+      const isNumeric = /^\d+$/.test(searchTerm);
 
-      for (let i = 1; i < siswaData.length; i++) {
-        const studentNisn = String(siswaData[i][1] || '').replace(/^'/, '').trim();
-        if (studentNisn === searchNisn) {
+      // Cari berdasarkan NISN (exact match)
+      if (isNumeric) {
+        for (let i = 1; i < siswaData.length; i++) {
+          const studentNisn = String(siswaData[i][1] || '').replace(/^'/, '').trim();
+          if (studentNisn === searchTerm) {
+            userFound = {
+              role: 'siswa',
+              identifier: studentNisn,
+              nama: siswaData[i][0] || '',
+              kelas: siswaData[i][8] || '-',
+              noHp: siswaData[i][7] || ''
+            };
+            break;
+          }
+        }
+      }
+
+      // Cari berdasarkan NAMA (exact match, case insensitive)
+      if (!userFound) {
+        const searchLower = searchTerm.toLowerCase();
+        
+        for (let i = 1; i < siswaData.length; i++) {
+          const studentName = String(siswaData[i][0] || '').trim().toLowerCase();
+          if (studentName === searchLower) {
+            const studentNisn = String(siswaData[i][1] || '').replace(/^'/, '').trim();
+            userFound = {
+              role: 'siswa',
+              identifier: studentNisn,
+              nama: siswaData[i][0] || '',
+              kelas: siswaData[i][8] || '-',
+              noHp: siswaData[i][7] || ''
+            };
+            break;
+          }
+        }
+      }
+
+      // Cari berdasarkan NAMA (partial match)
+      if (!userFound) {
+        const searchLower = searchTerm.toLowerCase();
+        let matches = [];
+        
+        for (let i = 1; i < siswaData.length; i++) {
+          const studentName = String(siswaData[i][0] || '').trim().toLowerCase();
+          if (studentName.includes(searchLower)) {
+            matches.push({
+              nisn: String(siswaData[i][1] || '').replace(/^'/, '').trim(),
+              nama: siswaData[i][0] || '',
+              kelas: siswaData[i][8] || '-',
+              noHp: siswaData[i][7] || ''
+            });
+          }
+        }
+        
+        // Jika hanya 1 match, langsung gunakan
+        if (matches.length === 1) {
           userFound = {
             role: 'siswa',
-            identifier: studentNisn,
-            nama: siswaData[i][0],
-            kelas: siswaData[i][8] || '-',
-            noHp: siswaData[i][7] || ''
+            identifier: matches[0].nisn,
+            nama: matches[0].nama,
+            kelas: matches[0].kelas || '-',
+            noHp: matches[0].noHp || ''
           };
-          break;
+        } else if (matches.length > 1) {
+          // Log percobaan login dengan multiple results
+          try {
+            await addLog('auth', 'login_failed', searchTerm, 
+              `Login siswa gagal - multiple results (${matches.length})`, {
+              search: searchTerm,
+              method: 'nama',
+              reason: 'Multiple results',
+              count: matches.length
+            });
+          } catch (e) {}
+          
+          return {
+            success: false,
+            message: `Ditemukan ${matches.length} siswa dengan nama "${nisn}". Gunakan NISN untuk lebih tepat.`,
+            suggestions: matches.slice(0, 5).map(m => ({
+              nama: m.nama,
+              nisn: m.nisn,
+              kelas: m.kelas
+            }))
+          };
         }
       }
 
       if (!userFound) {
         try {
-          await addLog('auth', 'login_failed', nisn, 'Login siswa gagal - NISN tidak ditemukan', {
-            nisn: nisn,
-            method: 'nisn',
-            reason: 'NISN tidak ditemukan'
+          await addLog('auth', 'login_failed', nisn, 
+            'Login siswa gagal - tidak ditemukan', {
+            search: nisn,
+            method: isNumeric ? 'nisn' : 'nama',
+            reason: 'Tidak ditemukan'
           });
         } catch (e) {}
-        return { success: false, message: `NISN "${nisn}" tidak ditemukan` };
+        
+        return { 
+          success: false, 
+          message: `Siswa dengan NISN/Nama "${nisn}" tidak ditemukan di database.` 
+        };
       }
     }
     // ==========================================
@@ -74,9 +153,7 @@ async function login(username, password, nisn) {
         }
       }
 
-      // ==========================================
       // FALLBACK: Jika tidak ditemukan di Google Sheets, cek .env
-      // ==========================================
       if (!userFound) {
         const envAdminUser = process.env.ADMIN_USERNAME || 'admin';
         const envAdminPass = process.env.ADMIN_PASSWORD || 'admin123';
@@ -99,12 +176,14 @@ async function login(username, password, nisn) {
 
       if (!userFound) {
         try {
-          await addLog('auth', 'login_failed', username, 'Login gagal - kredensial salah', {
+          await addLog('auth', 'login_failed', username, 
+            'Login gagal - kredensial salah', {
             username: username,
             method: 'username_password',
             reason: 'Username atau password salah'
           });
         } catch (e) {}
+        
         return { success: false, message: 'Username atau password salah' };
       }
     }
@@ -137,7 +216,8 @@ async function login(username, password, nisn) {
     // LOG AKTIVITAS
     // ==========================================
     try {
-      await addLog('auth', 'login', userFound.identifier, `${userFound.role} login: ${userFound.nama}`, {
+      await addLog('auth', 'login', userFound.identifier, 
+        `${userFound.role} login: ${userFound.nama}`, {
         role: userFound.role,
         nama: userFound.nama,
         kelas: userFound.kelas,
@@ -146,7 +226,7 @@ async function login(username, password, nisn) {
       });
     } catch (e) {}
 
-    console.log(`[AUTH] ${userFound.role} ${userFound.nama} berhasil login`);
+    console.log(`[AUTH] ${userFound.role} ${userFound.nama} berhasil login (${loginMethod})`);
 
     return {
       success: true,
@@ -161,22 +241,21 @@ async function login(username, password, nisn) {
   } catch (error) {
     console.error('[AUTH] Login error:', error);
     try {
-      await addLog('auth', 'login_error', 'system', `Error saat login: ${error.message}`, {
+      await addLog('auth', 'login_error', 'system', 
+        `Error saat login: ${error.message}`, {
         error: error.message,
         username: username || '',
         nisn: nisn || ''
       });
     } catch (e) {}
-    return { success: false, message: error.message };
+    return { success: false, message: 'Terjadi kesalahan: ' + error.message };
   }
 }
 
 async function verifyToken(token) {
   try {
-    // Verify JWT
     const decoded = jwt.verify(token, JWT_SECRET);
 
-    // Verify session (dengan error handling)
     try {
       const session = await getSession(token);
       if (!session.success) {
@@ -184,7 +263,6 @@ async function verifyToken(token) {
       }
     } catch (e) {
       console.error('[AUTH] Session check error:', e.message);
-      // Tetap lanjutkan - session service mungkin error
     }
 
     return decoded;
@@ -202,13 +280,10 @@ async function verifyToken(token) {
 
 async function logout(token) {
   try {
-    // Verifikasi token dulu
     let userInfo = null;
     try {
       userInfo = jwt.verify(token, JWT_SECRET);
-    } catch (e) {
-      // Token mungkin expired, tetap lanjutkan logout
-    }
+    } catch (e) {}
 
     let result = { success: false };
     try {
@@ -220,7 +295,8 @@ async function logout(token) {
 
     if (userInfo) {
       try {
-        await addLog('auth', 'logout', userInfo.id, `${userInfo.role} logout: ${userInfo.nama}`, {
+        await addLog('auth', 'logout', userInfo.id, 
+          `${userInfo.role} logout: ${userInfo.nama}`, {
           role: userInfo.role,
           nama: userInfo.nama
         });
@@ -241,7 +317,7 @@ async function requireRole(token, requiredRole) {
   if (typeof requiredRole === 'string') {
     if (decoded.role !== requiredRole && decoded.role !== 'admin') {
       try {
-        await addLog('auth', 'access_denied', decoded.id, 
+        await addLog('auth', 'access_denied', decoded.id,
           `Akses ditolak: ${decoded.role} mencoba akses ${requiredRole}`, {
           user_role: decoded.role,
           required_role: requiredRole,

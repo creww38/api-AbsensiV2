@@ -138,25 +138,40 @@ async function cleanupExpiredSessions() {
   try {
     const data = await getSheetData(SESSION_SHEET);
     const now = new Date();
-    let cleaned = 0;
+    const rowsToDelete = [];
     
+    // Kumpulkan index yang akan dihapus
     for (let i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
       const expiresAt = new Date(data[i][4]);
-      if (expiresAt < now || data[i][5] === 'expired' || data[i][5] === 'logout') {
-        const rowIndex = i + 1;
-        await deleteSheetRow(SESSION_SHEET, rowIndex);
-        cleaned++;
+      if (expiresAt < now || data[i][5] === 'expired' || data[i][5] === 'logout' || data[i][5] === 'revoked') {
+        rowsToDelete.push(i + 1); // +1 karena sheet row index mulai dari 1
       }
     }
     
-    console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
+    // FIX: Hapus dari index TERBESAR ke terkecil agar index tidak bergeser
+    rowsToDelete.sort((a, b) => b - a);
+    
+    let cleaned = 0;
+    for (const rowIndex of rowsToDelete) {
+      try {
+        await deleteSheetRow(SESSION_SHEET, rowIndex);
+        cleaned++;
+      } catch (err) {
+        console.error(`Error deleting session row ${rowIndex}:`, err.message);
+      }
+    }
+    
+    if (cleaned > 0) {
+      console.log(`🧹 Cleaned up ${cleaned} expired sessions`);
+    }
+    
     return { success: true, cleaned };
   } catch (error) {
     console.error('Cleanup sessions error:', error);
     return { success: false, message: error.message };
   }
 }
-
 // Auto cleanup expired sessions every hour
 setInterval(() => {
   cleanupExpiredSessions();

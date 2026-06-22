@@ -1,3 +1,4 @@
+// api-absensiV2/routes/pengumuman.js
 //    ██████╗ ███████╗███╗   ██╗ ██████╗ ██╗   ██╗███╗   ███╗██╗   ██╗███╗   ███╗ █████╗ ███╗   ██╗
 //    ██╔══██╗██╔════╝████╗  ██║██╔════╝ ██║   ██║████╗ ████║██║   ██║████╗ ████║██╔══██╗████╗  ██║
 //    ██████╔╝█████╗  ██╔██╗ ██║██║  ███╗██║   ██║██╔████╔██║██║   ██║██╔████╔██║███████║██╔██╗ ██║
@@ -60,7 +61,7 @@ router.get('/from-whatsapp', authenticate, authorize(['guru', 'admin']), async (
   } catch (error) { res.json({ success: false, message: error.message }); }
 });
 
-// BUAT pengumuman (WEB ADMIN)
+// BUAT pengumuman (WEB ADMIN) - INSERT KE WHATSAPP QUEUE
 router.post('/', authenticate, authorize(['guru', 'admin']), async (req, res) => {
   try {
     const { judul, isi } = req.body;
@@ -69,17 +70,50 @@ router.post('/', authenticate, authorize(['guru', 'admin']), async (req, res) =>
     if (!isi || !isi.trim()) return res.json({ success: false, message: 'Isi wajib diisi' });
 
     const now = new Date();
-    await appendToSheet(PENGUMUMAN_SHEET, [now.toISOString(), judul.trim(), isi.trim(), user.nama || user.id, user.role, 'aktif', 'web']);
-    await addLog('pengumuman', 'create', user.id, `Buat pengumuman: ${judul}`, { judul, oleh: user.nama, dari: 'web_admin' });
 
-    // Queue WhatsApp dengan tag_all
+    // 1. Simpan ke sheet pengumuman
+    await appendToSheet(PENGUMUMAN_SHEET, [
+      now.toISOString(),
+      judul.trim(),
+      isi.trim(),
+      user.nama || user.id,
+      user.role,
+      'aktif',
+      'web'
+    ]);
+
+    await addLog('pengumuman', 'create', user.id, `Buat pengumuman: ${judul}`, {
+      judul, oleh: user.nama, dari: 'web_admin'
+    });
+
+    // 2. INSERT KE WHATSAPP QUEUE (whatsapp_notifications sheet)
     const groupId = process.env.WHATSAPP_GROUP_ID || process.env.GROUP_ID;
-    const broadcastMessage = `*PENGUMUMAN*\n\n*${judul}*\n\n${isi}\n\n--------------------------------\n📅 ${now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n🕐 ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}\n✍️ Oleh: ${user.nama || user.id} (Admin Web)\n--------------------------------\n\n_Pesan otomatis dari Sistem Absensi_\n_Mohon diperhatikan untuk seluruh siswa dan guru_`;
 
-    await appendToSheet('whatsapp_notifications', [now.toISOString(), groupId || 'group', broadcastMessage, 'pending', 'pengumuman', 'tag_all', user.nama || user.id]);
+    const waMessage = `*PENGUMUMAN*\n\n` +
+      `*${judul.trim()}*\n\n` +
+      `${isi.trim()}\n\n` +
+      `--------------------------------\n` +
+      `📅 ${now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n` +
+      `🕐 ${now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}\n` +
+      `✍️ Oleh: ${user.nama || user.id} (Admin Web)\n` +
+      `--------------------------------\n\n` +
+      `_Pesan otomatis dari Sistem Absensi_`;
+
+    // Insert ke whatsapp_notifications
+    // Kolom: timestamp, phoneNumber, message, status, tipe, flag, pengirim
+    await appendToSheet('whatsapp_notifications', [
+      now.toISOString(),
+      groupId || 'group',
+      waMessage,
+      'pending',
+      'pengumuman',
+      'tag_all',
+      user.nama || user.id
+    ]);
+
     console.log(`[PENGUMUMAN] Queue WA: "${judul}" by ${user.nama}`);
 
-    // Notifikasi ke guru
+    // 3. Notifikasi sistem ke guru
     try {
       const usersData = await getSheetData(process.env.SHEET_USERS || 'users');
       for (let i = 1; i < usersData.length; i++) {
@@ -87,10 +121,25 @@ router.post('/', authenticate, authorize(['guru', 'admin']), async (req, res) =>
           await createNotification(usersData[i][0], 'guru', 'Pengumuman Baru', `${user.nama}: ${judul}`, 'info');
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Notif guru error:', e.message);
+    }
 
-    res.json({ success: true, message: 'Pengumuman dibuat dan dikirim ke grup WhatsApp dengan tag semua member', data: { judul: judul.trim(), isi: isi.trim(), pengirim: user.nama, dikirimKe: 'whatsapp_group', tagAll: true } });
-  } catch (error) { res.json({ success: false, message: error.message }); }
+    res.json({
+      success: true,
+      message: 'Pengumuman dibuat dan dikirim ke WhatsApp',
+      data: {
+        judul: judul.trim(),
+        isi: isi.trim(),
+        pengirim: user.nama,
+        dikirimKe: groupId ? 'whatsapp_group' : 'system_only'
+      }
+    });
+
+  } catch (error) {
+    console.error('Create pengumuman error:', error);
+    res.json({ success: false, message: error.message });
+  }
 });
 
 // BUAT pengumuman dari WHATSAPP

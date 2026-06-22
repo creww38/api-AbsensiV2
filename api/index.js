@@ -11,7 +11,7 @@
 //   ██║  ██║██████╔╝███████║███████╗██║ ╚████║███████║ ╚████╔╝ ███████╗
 //   ╚═╝  ╚═╝╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝  ╚═══╝  ╚══════╝
 //   API Absensi Sekolah v2.0 - VERCEL COMPATIBLE
-
+//   api-AbsensiV2/api/index.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -65,41 +65,15 @@ global.tempDir = tempDir;
 app.use('/temp', express.static(tempDir));
 
 // ==========================================
-// CORS CONFIGURATION - SETTING ULANG
+// CORS CONFIGURATION - SINGLE HANDLER SAJA
 // ==========================================
-
-// ==========================================
-// CORS PREFLIGHT HANDLER - HARUS PALING ATAS
-// ==========================================
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
-  return res.status(200).end();
-});
-
-// CORS untuk semua request
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
 app.use(corsMiddleware);
-// Setelah itu baru middleware lain...
+
 // ==========================================
 // MIDDLEWARE LAINNYA
 // ==========================================
 
-// Security headers (dengan CSP yang longgar)
+// Security headers
 app.use(helmet({ 
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
@@ -132,7 +106,7 @@ app.use((req, res, next) => {
 
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500, // Ditingkatkan untuk development
+  max: 500,
   message: { 
     success: false, 
     message: 'Terlalu banyak permintaan. Silakan coba lagi nanti.' 
@@ -143,7 +117,7 @@ const generalLimiter = rateLimit({
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20, // Ditingkatkan
+  max: 20,
   skipSuccessfulRequests: true,
   message: { 
     success: false, 
@@ -153,7 +127,7 @@ const loginLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 60, // Ditingkatkan
+  max: 60,
   message: { 
     success: false, 
     message: 'Terlalu banyak permintaan API. Silakan tunggu sebentar.' 
@@ -209,7 +183,9 @@ app.get('/api/health', (req, res) => {
     platform: process.platform,
     tempDir: tempDir,
     cors: {
-      allowedOrigins: process.env.NODE_ENV === 'production' ? allowedOrigins.length + ' domains' : 'All (dev mode)',
+      allowedOrigins: process.env.NODE_ENV === 'production' 
+        ? 'Production domains' 
+        : 'All origins (dev mode)',
       credentials: true
     }
   };
@@ -287,6 +263,17 @@ function formatUptime(seconds) {
   parts.push(`${secs}d`);
   
   return parts.join(' ');
+}
+
+// ==========================================
+// START SERVER - LOCAL DEVELOPMENT ONLY
+// ==========================================
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+    console.log(`📋 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`📁 Temp dir: ${tempDir}`);
+  });
 }
 
 // ==========================================

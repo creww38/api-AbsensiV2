@@ -1,3 +1,4 @@
+// api-absensiV2/controllers/guruController.js
 const guruService = require('../services/guruService');
 
 async function getAll(req, res) {
@@ -8,16 +9,18 @@ async function getAll(req, res) {
 
 async function create(req, res) {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  const { username, password, kelas } = req.body;
-  const result = await guruService.create(token, username, password, kelas);
+  // FIX: Kirim semua parameter: username, password, kelas, nama, noHp
+  const { username, password, kelas, nama, noHp } = req.body;
+  const result = await guruService.create(token, username, password, kelas, nama, noHp);
   res.json(result);
 }
 
 async function update(req, res) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   const { username } = req.params;
-  const { newUsername, password, kelas } = req.body;
-  const result = await guruService.update(token, username, newUsername, password, kelas);
+  // FIX: Kirim semua parameter termasuk nama dan noHp
+  const { newUsername, password, kelas, nama, noHp } = req.body;
+  const result = await guruService.update(token, username, newUsername, password, kelas, nama, noHp);
   res.json(result);
 }
 
