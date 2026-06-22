@@ -5,7 +5,7 @@
 //    ██║  ██║██║   ██║██║     ╚════██║
 //    ██████╔╝╚██████╔╝╚██████╗███████║
 //    ╚═════╝  ╚═════╝  ╚═════╝╚══════╝
-//    API Documentation - Scalar API Reference + Try It
+//    API Documentation - Scalar + Swagger UI Fallback
 
 const express = require('express');
 const router = express.Router();
@@ -14,7 +14,7 @@ const packageInfo = require('../package.json');
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 // ==========================================
-// OPENAPI 3.1 SPEC - Untuk Scalar
+// OPENAPI 3.1 SPEC
 // ==========================================
 const openApiSpec = {
   openapi: '3.1.0',
@@ -24,7 +24,7 @@ const openApiSpec = {
     description: 'Backend API untuk sistem absensi sekolah berbasis QR Code, WhatsApp, dan Google Sheets.\n\n**Fitur Utama:**\n- Absensi masuk/pulang dengan NISN atau Nama\n- Monitoring realtime per kelas\n- Pengajuan izin/sakit dengan notifikasi WhatsApp\n- Export laporan ke Excel\n- Manajemen siswa & guru\n- Integrasi WhatsApp Gateway & Bot',
     contact: {
       name: 'Developer',
-      url: 'https://github.com/your-repo'
+      url: 'https://github.com/creww38/api-absensiV2'
     }
   },
   servers: [
@@ -104,7 +104,7 @@ const openApiSpec = {
     // ==========================================
     '/api/auth/login': {
       post: {
-        tags: ['🔐 Auth'],
+        tags: ['Auth'],
         summary: 'Login (Guru/Admin/Siswa)',
         description: 'Login untuk semua role. Guru/Admin pakai username & password. Siswa pakai NISN atau Nama.',
         security: [],
@@ -124,21 +124,19 @@ const openApiSpec = {
     },
     '/api/auth/logout': {
       post: {
-        tags: ['🔐 Auth'],
+        tags: ['Auth'],
         summary: 'Logout',
         security: [{ bearerAuth: [] }],
-        responses: {
-          '200': { description: 'Logout berhasil' }
-        }
+        responses: { '200': { description: 'Logout berhasil' } }
       }
     },
     '/api/auth/verify': {
       get: {
-        tags: ['🔐 Auth'],
+        tags: ['Auth'],
         summary: 'Verifikasi Token',
         security: [{ bearerAuth: [] }],
         responses: {
-          '200': { description: 'Token valid', content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, user: { type: 'object' } } } } } }
+          '200': { description: 'Token valid' }
         }
       }
     },
@@ -148,9 +146,9 @@ const openApiSpec = {
     // ==========================================
     '/api/absensi/scan': {
       post: {
-        tags: ['📋 Absensi'],
+        tags: ['Absensi'],
         summary: 'Scan Absensi Masuk/Pulang',
-        description: 'Scan absensi siswa menggunakan NISN atau Nama. Otomatis mendeteksi absen masuk atau pulang.',
+        description: 'Scan absensi siswa menggunakan NISN atau Nama.',
         requestBody: {
           required: true,
           content: {
@@ -159,57 +157,31 @@ const openApiSpec = {
             }
           }
         },
-        responses: {
-          '200': {
-            description: 'Hasil scan',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    type: { type: 'string', enum: ['datang', 'pulang'] },
-                    message: { type: 'string' },
-                    nama: { type: 'string' },
-                    nisn: { type: 'string' },
-                    kelas: { type: 'string' },
-                    jamDatang: { type: 'string' },
-                    jamPulang: { type: 'string' },
-                    keterangan: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
+        responses: { '200': { description: 'Hasil scan' } }
       }
     },
     '/api/absensi/today/{nisn}': {
       get: {
-        tags: ['📋 Absensi'],
+        tags: ['Absensi'],
         summary: 'Cek Absensi Hari Ini',
         parameters: [
           { name: 'nisn', in: 'path', required: true, schema: { type: 'string' }, description: 'NISN Siswa' }
         ],
-        responses: {
-          '200': { description: 'Data absensi hari ini' }
-        }
+        responses: { '200': { description: 'Data absensi hari ini' } }
       }
     },
     '/api/absensi/list': {
       get: {
-        tags: ['📋 Absensi'],
+        tags: ['Absensi'],
         summary: 'List Absensi (dengan filter)',
         parameters: [
-          { name: 'tanggalMulai', in: 'query', schema: { type: 'string', format: 'date' }, description: 'Format: YYYY-MM-DD' },
+          { name: 'tanggalMulai', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'tanggalAkhir', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'kelas', in: 'query', schema: { type: 'string' } },
           { name: 'nisn', in: 'query', schema: { type: 'string' } },
           { name: 'status', in: 'query', schema: { type: 'string', enum: ['Hadir', 'Sakit', 'Izin', 'Alpa'] } }
         ],
-        responses: {
-          '200': { description: 'List data absensi' }
-        }
+        responses: { '200': { description: 'List data absensi' } }
       }
     },
 
@@ -218,22 +190,20 @@ const openApiSpec = {
     // ==========================================
     '/api/monitoring/realtime': {
       get: {
-        tags: ['📊 Monitoring'],
+        tags: ['Monitoring'],
         summary: 'Monitoring Realtime',
-        description: 'Melihat status absensi seluruh siswa hari ini secara realtime.',
+        description: 'Melihat status absensi seluruh siswa hari ini.',
         parameters: [
           { name: 'kelas', in: 'query', schema: { type: 'string' }, description: 'Filter kelas (opsional)' }
         ],
-        responses: {
-          '200': { description: 'Data monitoring realtime' }
-        }
+        responses: { '200': { description: 'Data monitoring realtime' } }
       }
     },
     '/api/monitoring/status': {
       put: {
-        tags: ['📊 Monitoring'],
+        tags: ['Monitoring'],
         summary: 'Update Status Manual',
-        description: 'Mengubah status absensi siswa secara manual (misal: jadi Sakit/Izin/Alpa).',
+        description: 'Mengubah status absensi siswa secara manual.',
         requestBody: {
           required: true,
           content: {
@@ -251,9 +221,7 @@ const openApiSpec = {
             }
           }
         },
-        responses: {
-          '200': { description: 'Status berhasil diubah' }
-        }
+        responses: { '200': { description: 'Status berhasil diubah' } }
       }
     },
 
@@ -262,14 +230,14 @@ const openApiSpec = {
     // ==========================================
     '/api/siswa': {
       get: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'List Semua Siswa',
         responses: { '200': { description: 'List data siswa' } }
       },
       post: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'Tambah Siswa Baru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         requestBody: {
           required: true,
           content: {
@@ -280,14 +248,14 @@ const openApiSpec = {
                 properties: {
                   nama: { type: 'string', example: 'Ahmad Fauzi' },
                   nisn: { type: 'string', example: '1234567890' },
-                  jenisKelamin: { type: 'string', example: 'Laki-laki' },
-                  tanggalLahir: { type: 'string', example: '2005-06-15' },
-                  agama: { type: 'string', example: 'Islam' },
-                  namaAyah: { type: 'string', example: 'Budi' },
-                  namaIbu: { type: 'string', example: 'Siti' },
-                  noHp: { type: 'string', example: '08123456789' },
-                  kelas: { type: 'string', example: 'XII IPA 1' },
-                  alamat: { type: 'string', example: 'Jl. Merdeka No. 10' }
+                  jenisKelamin: { type: 'string' },
+                  tanggalLahir: { type: 'string' },
+                  agama: { type: 'string' },
+                  namaAyah: { type: 'string' },
+                  namaIbu: { type: 'string' },
+                  noHp: { type: 'string' },
+                  kelas: { type: 'string' },
+                  alamat: { type: 'string' }
                 }
               }
             }
@@ -298,39 +266,39 @@ const openApiSpec = {
     },
     '/api/siswa/kelas': {
       get: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'List Kelas Tersedia',
         responses: { '200': { description: 'List kelas unik' } }
       }
     },
     '/api/siswa/{nisn}': {
       get: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'Detail Siswa by NISN',
         parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Detail siswa' } }
       },
       put: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'Update Data Siswa',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
         responses: { '200': { description: 'Siswa berhasil diupdate' } }
       },
       delete: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'Hapus Siswa',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'nisn', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Siswa berhasil dihapus' } }
       }
     },
     '/api/siswa/import/bulk': {
       post: {
-        tags: ['👨‍🎓 Siswa'],
+        tags: ['Siswa'],
         summary: 'Import Banyak Siswa',
-        description: '🔒 Admin only. Body berupa array of object siswa.',
+        description: 'Admin only. Body berupa array of object siswa.',
         requestBody: {
           required: true,
           content: {
@@ -358,15 +326,15 @@ const openApiSpec = {
     // ==========================================
     '/api/guru': {
       get: {
-        tags: ['👨‍🏫 Guru'],
+        tags: ['Guru'],
         summary: 'List Semua Guru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         responses: { '200': { description: 'List data guru' } }
       },
       post: {
-        tags: ['👨‍🏫 Guru'],
+        tags: ['Guru'],
         summary: 'Tambah Guru Baru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         requestBody: {
           required: true,
           content: {
@@ -377,9 +345,9 @@ const openApiSpec = {
                 properties: {
                   username: { type: 'string', example: 'guru1' },
                   password: { type: 'string', example: 'pass123', minLength: 6 },
-                  kelas: { type: 'string', example: 'XII IPA 1' },
-                  nama: { type: 'string', example: 'Budi Santoso, S.Pd.' },
-                  noHp: { type: 'string', example: '08123456789' }
+                  kelas: { type: 'string' },
+                  nama: { type: 'string' },
+                  noHp: { type: 'string' }
                 }
               }
             }
@@ -390,26 +358,26 @@ const openApiSpec = {
     },
     '/api/guru/{username}': {
       put: {
-        tags: ['👨‍🏫 Guru'],
+        tags: ['Guru'],
         summary: 'Update Data Guru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' } }],
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
         responses: { '200': { description: 'Guru berhasil diupdate' } }
       },
       delete: {
-        tags: ['👨‍🏫 Guru'],
+        tags: ['Guru'],
         summary: 'Hapus Guru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'username', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { '200': { description: 'Guru berhasil dihapus' } }
       }
     },
     '/api/guru/import/bulk': {
       post: {
-        tags: ['👨‍🏫 Guru'],
+        tags: ['Guru'],
         summary: 'Import Banyak Guru',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'array', items: { type: 'object' } } } } },
         responses: { '200': { description: 'Import selesai' } }
       }
@@ -420,9 +388,9 @@ const openApiSpec = {
     // ==========================================
     '/api/izin/create': {
       post: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Ajukan Izin/Sakit',
-        description: '🔒 Siswa only',
+        description: 'Siswa only',
         requestBody: {
           required: true,
           content: {
@@ -436,9 +404,9 @@ const openApiSpec = {
     },
     '/api/izin/create-whatsapp': {
       post: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Ajukan Izin dari WhatsApp',
-        description: '🔒 Guru/Admin only (untuk bot WA)',
+        description: 'Guru/Admin only (untuk bot WA)',
         requestBody: {
           required: true,
           content: {
@@ -464,59 +432,59 @@ const openApiSpec = {
     },
     '/api/izin/my': {
       get: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'List Izin Saya',
-        description: '🔒 Siswa only',
+        description: 'Siswa only',
         responses: { '200': { description: 'List pengajuan izin' } }
       }
     },
     '/api/izin/list': {
       get: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'List Semua Izin',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         responses: { '200': { description: 'List semua pengajuan izin' } }
       }
     },
     '/api/izin/pending': {
       get: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'List Izin Pending',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         responses: { '200': { description: 'List izin pending' } }
       }
     },
     '/api/izin/stats': {
       get: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Statistik Izin',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         responses: { '200': { description: 'Statistik pengajuan izin' } }
       }
     },
     '/api/izin/{id}/approve': {
       put: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Setujui Izin',
-        description: '🔒 Guru/Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' }, description: 'ID pengajuan izin' }],
+        description: 'Guru/Admin only',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Izin disetujui' } }
       }
     },
     '/api/izin/{id}/reject': {
       put: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Tolak Izin',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Izin ditolak' } }
       }
     },
     '/api/izin/whatsapp/{id}/approve': {
       put: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Setujui Izin via WhatsApp',
-        description: '🔒 Guru/Admin only. Approve dari bot WhatsApp.',
+        description: 'Guru/Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         requestBody: {
           required: true,
@@ -525,9 +493,7 @@ const openApiSpec = {
               schema: {
                 type: 'object',
                 required: ['approverName'],
-                properties: {
-                  approverName: { type: 'string', example: 'Budi Santoso' }
-                }
+                properties: { approverName: { type: 'string' } }
               }
             }
           }
@@ -537,9 +503,9 @@ const openApiSpec = {
     },
     '/api/izin/whatsapp/{id}/reject': {
       put: {
-        tags: ['📝 Izin/Sakit'],
+        tags: ['Izin/Sakit'],
         summary: 'Tolak Izin via WhatsApp',
-        description: '🔒 Guru/Admin only. Reject dari bot WhatsApp.',
+        description: 'Guru/Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         requestBody: {
           required: true,
@@ -548,9 +514,7 @@ const openApiSpec = {
               schema: {
                 type: 'object',
                 required: ['rejectorName'],
-                properties: {
-                  rejectorName: { type: 'string', example: 'Budi Santoso' }
-                }
+                properties: { rejectorName: { type: 'string' } }
               }
             }
           }
@@ -564,9 +528,9 @@ const openApiSpec = {
     // ==========================================
     '/api/rekap/periode': {
       get: {
-        tags: ['📈 Rekap'],
+        tags: ['Rekap'],
         summary: 'Rekap Per Periode',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         parameters: [
           { name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
           { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
@@ -577,9 +541,9 @@ const openApiSpec = {
     },
     '/api/rekap/siswa': {
       get: {
-        tags: ['📈 Rekap'],
+        tags: ['Rekap'],
         summary: 'Rekap Per Siswa',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         parameters: [
           { name: 'tanggalMulai', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
           { name: 'tanggalAkhir', in: 'query', required: true, schema: { type: 'string', format: 'date' } },
@@ -594,9 +558,9 @@ const openApiSpec = {
     // ==========================================
     '/api/export/excel': {
       post: {
-        tags: ['📥 Export'],
+        tags: ['Export'],
         summary: 'Export ke Excel',
-        description: '🔒 Guru/Admin only. Response berupa file .xlsx',
+        description: 'Guru/Admin only. Response berupa file .xlsx',
         requestBody: {
           required: true,
           content: {
@@ -613,22 +577,22 @@ const openApiSpec = {
           }
         },
         responses: {
-          '200': { description: 'File Excel', content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } } }
+          '200': { description: 'File Excel' }
         }
       }
     },
     '/api/export/send-whatsapp': {
       post: {
-        tags: ['📥 Export'],
+        tags: ['Export'],
         summary: 'Export & Simpan untuk WhatsApp',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
         responses: { '200': { description: 'File tersimpan' } }
       }
     },
     '/api/export/types': {
       get: {
-        tags: ['📥 Export'],
+        tags: ['Export'],
         summary: 'List Tipe Export',
         responses: { '200': { description: 'List tipe export tersedia' } }
       }
@@ -639,15 +603,15 @@ const openApiSpec = {
     // ==========================================
     '/api/config': {
       get: {
-        tags: ['⚙️ Konfigurasi'],
+        tags: ['Konfigurasi'],
         summary: 'Lihat Konfigurasi',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         responses: { '200': { description: 'Data konfigurasi' } }
       },
       put: {
-        tags: ['⚙️ Konfigurasi'],
+        tags: ['Konfigurasi'],
         summary: 'Update Konfigurasi',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         requestBody: {
           required: true,
           content: {
@@ -655,10 +619,10 @@ const openApiSpec = {
               schema: {
                 type: 'object',
                 properties: {
-                  jam_masuk_mulai: { type: 'string', example: '06:00' },
-                  jam_masuk_akhir: { type: 'string', example: '07:15' },
-                  jam_pulang_mulai: { type: 'string', example: '15:00' },
-                  jam_pulang_akhir: { type: 'string', example: '17:00' },
+                  jam_masuk_mulai: { type: 'string' },
+                  jam_masuk_akhir: { type: 'string' },
+                  jam_pulang_mulai: { type: 'string' },
+                  jam_pulang_akhir: { type: 'string' },
                   nama_sekolah: { type: 'string' },
                   semester: { type: 'string' },
                   tahun_ajaran: { type: 'string' }
@@ -676,15 +640,15 @@ const openApiSpec = {
     // ==========================================
     '/api/libur': {
       get: {
-        tags: ['📅 Libur'],
+        tags: ['Libur'],
         summary: 'List Hari Libur',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         responses: { '200': { description: 'List hari libur' } }
       },
       post: {
-        tags: ['📅 Libur'],
+        tags: ['Libur'],
         summary: 'Tambah Hari Libur',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         requestBody: {
           required: true,
           content: {
@@ -693,8 +657,8 @@ const openApiSpec = {
                 type: 'object',
                 required: ['tanggal'],
                 properties: {
-                  tanggal: { type: 'string', format: 'date', example: '2025-01-01' },
-                  keterangan: { type: 'string', example: 'Tahun Baru' }
+                  tanggal: { type: 'string', format: 'date' },
+                  keterangan: { type: 'string' }
                 }
               }
             }
@@ -705,9 +669,9 @@ const openApiSpec = {
     },
     '/api/libur/{tanggal}': {
       delete: {
-        tags: ['📅 Libur'],
+        tags: ['Libur'],
         summary: 'Hapus Hari Libur',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'tanggal', in: 'path', required: true, schema: { type: 'string' }, description: 'Format: YYYY-MM-DD' }],
         responses: { '200': { description: 'Hari libur dihapus' } }
       }
@@ -718,14 +682,14 @@ const openApiSpec = {
     // ==========================================
     '/api/notifications': {
       get: {
-        tags: ['🔔 Notifikasi'],
+        tags: ['Notifikasi'],
         summary: 'List Notifikasi Saya',
         responses: { '200': { description: 'List notifikasi' } }
       }
     },
     '/api/notifications/{id}/read': {
       put: {
-        tags: ['🔔 Notifikasi'],
+        tags: ['Notifikasi'],
         summary: 'Tandai Dibaca',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Notifikasi ditandai dibaca' } }
@@ -737,61 +701,14 @@ const openApiSpec = {
     // ==========================================
     '/api/pengumuman': {
       get: {
-        tags: ['📢 Pengumuman'],
+        tags: ['Pengumuman'],
         summary: 'List Semua Pengumuman',
         responses: { '200': { description: 'List pengumuman' } }
       },
       post: {
-        tags: ['📢 Pengumuman'],
+        tags: ['Pengumuman'],
         summary: 'Buat Pengumuman Baru',
-        description: '🔒 Guru/Admin only. Akan dikirim ke grup WhatsApp.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['judul', 'isi'],
-                properties: {
-                  judul: { type: 'string', example: 'Pengumuman Penting' },
-                  isi: { type: 'string', example: 'Besok libur...' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Pengumuman dibuat' } }
-      }
-    },
-    '/api/pengumuman/active': {
-      get: {
-        tags: ['📢 Pengumuman'],
-        summary: 'List Pengumuman Aktif',
-        security: [],
-        responses: { '200': { description: 'List pengumuman aktif' } }
-      }
-    },
-    '/api/pengumuman/from-whatsapp': {
-      get: {
-        tags: ['📢 Pengumuman'],
-        summary: 'List Pengumuman dari WhatsApp',
-        description: '🔒 Guru/Admin only',
-        responses: { '200': { description: 'List pengumuman dari WA' } }
-      }
-    },
-    '/api/pengumuman/stats': {
-      get: {
-        tags: ['📢 Pengumuman'],
-        summary: 'Statistik Pengumuman',
-        description: '🔒 Guru/Admin only',
-        responses: { '200': { description: 'Statistik pengumuman' } }
-      }
-    },
-    '/api/pengumuman/from-whatsapp': {
-      post: {
-        tags: ['📢 Pengumuman'],
-        summary: 'Simpan Pengumuman dari WhatsApp',
-        description: '🔒 Guru/Admin only',
+        description: 'Guru/Admin only',
         requestBody: {
           required: true,
           content: {
@@ -801,40 +718,54 @@ const openApiSpec = {
                 required: ['judul', 'isi'],
                 properties: {
                   judul: { type: 'string' },
-                  isi: { type: 'string' },
-                  pengirim: { type: 'string' },
-                  role: { type: 'string' }
+                  isi: { type: 'string' }
                 }
               }
             }
           }
         },
-        responses: { '200': { description: 'Pengumuman disimpan' } }
+        responses: { '200': { description: 'Pengumuman dibuat dan dikirim ke WhatsApp' } }
+      }
+    },
+    '/api/pengumuman/active': {
+      get: {
+        tags: ['Pengumuman'],
+        summary: 'List Pengumuman Aktif',
+        security: [],
+        responses: { '200': { description: 'List pengumuman aktif' } }
+      }
+    },
+    '/api/pengumuman/stats': {
+      get: {
+        tags: ['Pengumuman'],
+        summary: 'Statistik Pengumuman',
+        description: 'Guru/Admin only',
+        responses: { '200': { description: 'Statistik pengumuman' } }
       }
     },
     '/api/pengumuman/{id}/activate': {
       put: {
-        tags: ['📢 Pengumuman'],
+        tags: ['Pengumuman'],
         summary: 'Aktifkan Pengumuman',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Pengumuman diaktifkan' } }
       }
     },
     '/api/pengumuman/{id}/deactivate': {
       put: {
-        tags: ['📢 Pengumuman'],
+        tags: ['Pengumuman'],
         summary: 'Nonaktifkan Pengumuman',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Pengumuman dinonaktifkan' } }
       }
     },
     '/api/pengumuman/{id}': {
       delete: {
-        tags: ['📢 Pengumuman'],
+        tags: ['Pengumuman'],
         summary: 'Hapus Pengumuman',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Pengumuman dihapus' } }
       }
@@ -845,15 +776,15 @@ const openApiSpec = {
     // ==========================================
     '/api/feedback': {
       get: {
-        tags: ['💬 Feedback'],
+        tags: ['Feedback'],
         summary: 'List Feedback (Admin)',
-        description: '🔒 Admin/Guru only',
+        description: 'Admin/Guru only',
         responses: { '200': { description: 'List feedback' } }
       },
       post: {
-        tags: ['💬 Feedback'],
+        tags: ['Feedback'],
         summary: 'Kirim Feedback',
-        description: '🔒 Siswa only',
+        description: 'Siswa only',
         requestBody: {
           required: true,
           content: {
@@ -862,9 +793,9 @@ const openApiSpec = {
                 type: 'object',
                 required: ['pesan'],
                 properties: {
-                  kategori: { type: 'string', example: 'umum' },
-                  pesan: { type: 'string', minLength: 5, example: 'Aplikasi sangat membantu...' },
-                  rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 }
+                  kategori: { type: 'string' },
+                  pesan: { type: 'string', minLength: 5 },
+                  rating: { type: 'integer', minimum: 1, maximum: 5 }
                 }
               }
             }
@@ -875,17 +806,17 @@ const openApiSpec = {
     },
     '/api/feedback/my': {
       get: {
-        tags: ['💬 Feedback'],
+        tags: ['Feedback'],
         summary: 'Feedback Saya',
-        description: '🔒 Siswa only',
+        description: 'Siswa only',
         responses: { '200': { description: 'List feedback pribadi' } }
       }
     },
     '/api/feedback/{id}/read': {
       put: {
-        tags: ['💬 Feedback'],
+        tags: ['Feedback'],
         summary: 'Tandai Feedback Dibaca',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         responses: { '200': { description: 'Feedback ditandai dibaca' } }
       }
@@ -896,24 +827,22 @@ const openApiSpec = {
     // ==========================================
     '/api/sessions/my': {
       get: {
-        tags: ['🔑 Session'],
+        tags: ['Session'],
         summary: 'List Session Aktif',
         responses: { '200': { description: 'List session' } }
       }
     },
     '/api/sessions/revoke-all': {
       post: {
-        tags: ['🔑 Session'],
+        tags: ['Session'],
         summary: 'Hapus Semua Session Lain',
-        description: 'Menghapus semua session kecuali yang sedang digunakan.',
         responses: { '200': { description: 'Session lain dihapus' } }
       }
     },
     '/api/sessions/logout-all': {
       post: {
-        tags: ['🔑 Session'],
+        tags: ['Session'],
         summary: 'Logout Semua Device',
-        description: 'Logout dari semua device termasuk yang sedang digunakan.',
         responses: { '200': { description: 'Semua session dihapus' } }
       }
     },
@@ -923,15 +852,12 @@ const openApiSpec = {
     // ==========================================
     '/api/logs': {
       get: {
-        tags: ['📜 Logs'],
+        tags: ['Logs'],
         summary: 'List Log Aktivitas',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         parameters: [
           { name: 'kategori', in: 'query', schema: { type: 'string' } },
           { name: 'aksi', in: 'query', schema: { type: 'string' } },
-          { name: 'userId', in: 'query', schema: { type: 'string' } },
-          { name: 'tanggalMulai', in: 'query', schema: { type: 'string', format: 'date' } },
-          { name: 'tanggalAkhir', in: 'query', schema: { type: 'string', format: 'date' } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 100 } }
         ],
         responses: { '200': { description: 'List log' } }
@@ -939,49 +865,10 @@ const openApiSpec = {
     },
     '/api/logs/stats': {
       get: {
-        tags: ['📜 Logs'],
+        tags: ['Logs'],
         summary: 'Statistik Log',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         responses: { '200': { description: 'Statistik log' } }
-      }
-    },
-    '/api/logs/my': {
-      get: {
-        tags: ['📜 Logs'],
-        summary: 'Log Aktivitas Saya',
-        parameters: [
-          { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
-        ],
-        responses: { '200': { description: 'List log pribadi' } }
-      }
-    },
-    '/api/logs/cleanup': {
-      post: {
-        tags: ['📜 Logs'],
-        summary: 'Bersihkan Log Lama',
-        description: '🔒 Admin only',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  daysToKeep: { type: 'integer', default: 90, example: 30 }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Log dibersihkan' } }
-      }
-    },
-    '/api/logs/categories': {
-      get: {
-        tags: ['📜 Logs'],
-        summary: 'List Kategori Log',
-        description: '🔒 Admin only',
-        responses: { '200': { description: 'List kategori & aksi log' } }
       }
     },
 
@@ -990,20 +877,20 @@ const openApiSpec = {
     // ==========================================
     '/api/channel': {
       get: {
-        tags: ['📡 Channel'],
+        tags: ['Channel'],
         summary: 'List Berita Channel',
         security: [],
         parameters: [
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['aktif', 'nonaktif'] }, description: 'Default: aktif' },
+          { name: 'status', in: 'query', schema: { type: 'string', enum: ['aktif', 'nonaktif', 'all'] } },
           { name: 'search', in: 'query', schema: { type: 'string' } },
           { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 } }
         ],
         responses: { '200': { description: 'List berita channel' } }
       },
       post: {
-        tags: ['📡 Channel'],
+        tags: ['Channel'],
         summary: 'Simpan Berita Channel',
-        description: '🔒 Admin/Guru only',
+        description: 'Admin/Guru only',
         requestBody: {
           required: true,
           content: {
@@ -1014,10 +901,9 @@ const openApiSpec = {
                 properties: {
                   judul: { type: 'string' },
                   isi: { type: 'string' },
-                  sumber: { type: 'string', example: 'WhatsApp Channel' },
+                  sumber: { type: 'string' },
                   gambar: { type: 'string' },
-                  link: { type: 'string' },
-                  tanggal: { type: 'string', format: 'date' }
+                  link: { type: 'string' }
                 }
               }
             }
@@ -1026,70 +912,12 @@ const openApiSpec = {
         responses: { '200': { description: 'Berita disimpan' } }
       }
     },
-    '/api/channel/all': {
-      get: {
-        tags: ['📡 Channel'],
-        summary: 'List Semua Berita (Admin)',
-        description: '🔒 Admin/Guru only',
-        responses: { '200': { description: 'List semua berita' } }
-      }
-    },
     '/api/channel/stats': {
       get: {
-        tags: ['📡 Channel'],
+        tags: ['Channel'],
         summary: 'Statistik Channel',
-        description: '🔒 Admin only',
+        description: 'Admin only',
         responses: { '200': { description: 'Statistik channel' } }
-      }
-    },
-    '/api/channel/{id}/share': {
-      get: {
-        tags: ['📡 Channel'],
-        summary: 'Link Share Berita',
-        security: [],
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Link share untuk berbagai platform' } }
-      }
-    },
-    '/api/channel/{id}/publish/status': {
-      post: {
-        tags: ['📡 Channel'],
-        summary: 'Publish ke Status WhatsApp',
-        description: '🔒 Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Berita dipublish ke status WA' } }
-      }
-    },
-    '/api/channel/{id}/publish/group': {
-      post: {
-        tags: ['📡 Channel'],
-        summary: 'Publish ke Grup WhatsApp',
-        description: '🔒 Admin only',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        responses: { '200': { description: 'Berita dipublish ke grup WA' } }
-      }
-    },
-    '/api/channel/{id}/publish/social': {
-      post: {
-        tags: ['📡 Channel'],
-        summary: 'Auto-Post ke Media Sosial',
-        description: '🔒 Admin only. Platform: facebook, twitter, telegram',
-        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['platform'],
-                properties: {
-                  platform: { type: 'string', enum: ['facebook', 'twitter', 'telegram'], example: 'telegram' }
-                }
-              }
-            }
-          }
-        },
-        responses: { '200': { description: 'Berita dipost ke media sosial' } }
       }
     },
 
@@ -1098,385 +926,27 @@ const openApiSpec = {
     // ==========================================
     '/api/whatsapp/status': {
       get: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Cek Status Koneksi WhatsApp',
-        description: 'Mengecek apakah bot WhatsApp sedang terhubung dan siap mengirim pesan.',
+        tags: ['WhatsApp Bot'],
+        summary: 'Status Koneksi WhatsApp',
         security: [{ bearerAuth: [] }],
-        responses: {
-          '200': {
-            description: 'Status koneksi WhatsApp',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        connected: { type: 'boolean', description: 'Apakah WhatsApp terhubung' },
-                        hasClient: { type: 'boolean', description: 'Apakah client WhatsApp ada' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/qr': {
-      get: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Dapatkan QR Code untuk Login WhatsApp',
-        description: 'Mendapatkan QR code yang perlu di-scan menggunakan WhatsApp di HP untuk menghubungkan bot.',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          '200': {
-            description: 'Status QR code',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    message: { type: 'string', example: 'Waiting for QR code...' },
-                    qr: { type: 'string', description: 'QR code string (jika tersedia)' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/init': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Inisialisasi Ulang Bot WhatsApp',
-        description: 'Memulai ulang koneksi bot WhatsApp. Berguna jika koneksi terputus.',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          '200': {
-            description: 'Status inisialisasi',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    message: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/send': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Pesan WhatsApp Langsung',
-        description: '🔒 Admin only. Mengirim pesan WhatsApp langsung ke nomor tujuan (jika bot terhubung).',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumber', 'message'],
-                properties: {
-                  phoneNumber: {
-                    type: 'string',
-                    example: '08123456789',
-                    description: 'Nomor HP tujuan (format: 08xxx atau 62xxx)'
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'Halo, ini pesan dari sistem absensi.',
-                    description: 'Isi pesan WhatsApp'
-                  }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Status pengiriman',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    message: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/send-bulk': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Pesan WhatsApp Massal',
-        description: '🔒 Admin only. Mengirim pesan WhatsApp ke banyak nomor sekaligus.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumbers', 'message'],
-                properties: {
-                  phoneNumbers: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    example: ['08123456789', '08198765432'],
-                    description: 'Array nomor HP tujuan'
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'Pengumuman: Besok libur...',
-                    description: 'Isi pesan WhatsApp'
-                  }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Hasil pengiriman massal',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    sent: { type: 'integer', description: 'Jumlah berhasil terkirim' },
-                    failed: { type: 'integer', description: 'Jumlah gagal' },
-                    total: { type: 'integer' },
-                    results: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          phoneNumber: { type: 'string' },
-                          success: { type: 'boolean' },
-                          message: { type: 'string' }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/send-to-kelas': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Pesan ke Semua Siswa per Kelas',
-        description: '🔒 Guru/Admin only. Mengirim pesan WhatsApp ke semua siswa dalam satu kelas tertentu.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['kelas', 'message'],
-                properties: {
-                  kelas: {
-                    type: 'string',
-                    example: 'XII IPA 1',
-                    description: 'Nama kelas tujuan'
-                  },
-                  message: {
-                    type: 'string',
-                    example: 'Pengumuman untuk kelas XII IPA 1...',
-                    description: 'Isi pesan WhatsApp'
-                  }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Hasil pengiriman ke kelas',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    totalSiswa: { type: 'integer' },
-                    sent: { type: 'integer' },
-                    failed: { type: 'integer' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/send-to-all': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Pesan ke Semua Siswa',
-        description: '🔒 Admin only. Broadcast pesan WhatsApp ke seluruh siswa.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['message'],
-                properties: {
-                  message: {
-                    type: 'string',
-                    example: 'Pengumuman penting untuk seluruh siswa...',
-                    description: 'Isi pesan WhatsApp'
-                  }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': {
-            description: 'Hasil broadcast',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    totalSiswa: { type: 'integer' },
-                    sent: { type: 'integer' },
-                    failed: { type: 'integer' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    '/api/whatsapp/send-izin-notif': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Notifikasi Izin ke Siswa',
-        description: '🔒 Guru/Admin only. Mengirim notifikasi status pengajuan izin ke siswa via WhatsApp.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumber', 'nama', 'jenis', 'status'],
-                properties: {
-                  phoneNumber: { type: 'string', example: '08123456789' },
-                  nama: { type: 'string', example: 'Ahmad Fauzi' },
-                  jenis: { type: 'string', enum: ['izin', 'sakit'] },
-                  status: { type: 'string', enum: ['disetujui', 'ditolak'], example: 'disetujui' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': { description: 'Notifikasi terkirim' }
-        }
-      }
-    },
-    '/api/whatsapp/send-absen-notif': {
-      post: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Kirim Notifikasi Absensi ke Siswa',
-        description: '🔒 Guru/Admin only. Mengirim notifikasi absen masuk/pulang ke siswa via WhatsApp.',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['phoneNumber', 'nama', 'type', 'jam'],
-                properties: {
-                  phoneNumber: { type: 'string', example: '08123456789' },
-                  nama: { type: 'string', example: 'Ahmad Fauzi' },
-                  type: { type: 'string', enum: ['datang', 'pulang'], example: 'datang' },
-                  jam: { type: 'string', example: '07:00:00' },
-                  keterangan: { type: 'string', example: 'Tepat Waktu' }
-                }
-              }
-            }
-          }
-        },
-        responses: {
-          '200': { description: 'Notifikasi terkirim' }
-        }
+        responses: { '200': { description: 'Status koneksi WhatsApp' } }
       }
     },
     '/api/whatsapp/queue': {
       get: {
-        tags: ['🤖 WhatsApp Bot'],
-        summary: 'Lihat Antrian Notifikasi WhatsApp',
-        description: '🔒 Admin only. Melihat daftar notifikasi WhatsApp yang masih pending di Google Sheets.',
+        tags: ['WhatsApp Bot'],
+        summary: 'Lihat Antrian Notifikasi WA',
+        description: 'Admin only',
         security: [{ bearerAuth: [] }],
-        responses: {
-          '200': {
-            description: 'List antrian notifikasi',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    data: {
-                      type: 'array',
-                      items: {
-                        type: 'object',
-                        properties: {
-                          id: { type: 'integer' },
-                          timestamp: { type: 'string' },
-                          phoneNumber: { type: 'string' },
-                          message: { type: 'string' },
-                          status: { type: 'string', enum: ['pending', 'sent', 'failed'] }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        responses: { '200': { description: 'List antrian notifikasi' } }
       }
     },
     '/api/whatsapp/queue/{id}': {
       put: {
-        tags: ['🤖 WhatsApp Bot'],
+        tags: ['WhatsApp Bot'],
         summary: 'Update Status Antrian WA',
-        description: '🔒 Admin only. Dipanggil oleh bot WhatsApp untuk update status pengiriman.',
-        parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            schema: { type: 'integer' },
-            description: 'ID antrian notifikasi'
-          }
-        ],
+        description: 'Admin only',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
         requestBody: {
           required: true,
           content: {
@@ -1485,27 +955,20 @@ const openApiSpec = {
                 type: 'object',
                 required: ['status'],
                 properties: {
-                  status: {
-                    type: 'string',
-                    enum: ['sent', 'failed', 'pending'],
-                    example: 'sent',
-                    description: 'Status baru'
-                  }
+                  status: { type: 'string', enum: ['sent', 'failed', 'pending'] }
                 }
               }
             }
           }
         },
-        responses: {
-          '200': { description: 'Status antrian diupdate' }
-        }
+        responses: { '200': { description: 'Status antrian diupdate' } }
       }
     },
     '/api/whatsapp/send-notification': {
       post: {
-        tags: ['🤖 WhatsApp Bot'],
+        tags: ['WhatsApp Bot'],
         summary: 'Tambah Notifikasi ke Antrian WA',
-        description: '🔒 Guru/Admin only. Menambahkan notifikasi WhatsApp ke antrian (queue) untuk dikirim oleh bot.',
+        description: 'Guru/Admin only',
         requestBody: {
           required: true,
           content: {
@@ -1514,16 +977,14 @@ const openApiSpec = {
                 type: 'object',
                 required: ['phoneNumber', 'message'],
                 properties: {
-                  phoneNumber: { type: 'string', example: '08123456789' },
-                  message: { type: 'string', example: 'Pesan dari sistem' }
+                  phoneNumber: { type: 'string' },
+                  message: { type: 'string' }
                 }
               }
             }
           }
         },
-        responses: {
-          '200': { description: 'Notifikasi masuk antrian' }
-        }
+        responses: { '200': { description: 'Notifikasi masuk antrian' } }
       }
     },
 
@@ -1532,153 +993,219 @@ const openApiSpec = {
     // ==========================================
     '/api/health': {
       get: {
-        tags: ['🏥 System'],
+        tags: ['System'],
         summary: 'Health Check',
         security: [],
-        responses: {
-          '200': {
-            description: 'Status server',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean' },
-                    status: { type: 'string' },
-                    timestamp: { type: 'string' },
-                    environment: { type: 'string' },
-                    uptime: { type: 'number' },
-                    uptimeFormatted: { type: 'string' },
-                    memory: {
-                      type: 'object',
-                      properties: {
-                        heapUsed: { type: 'string' },
-                        heapTotal: { type: 'string' },
-                        rss: { type: 'string' }
-                      }
-                    },
-                    node: { type: 'string' },
-                    platform: { type: 'string' },
-                    tempDir: { type: 'string' },
-                    cors: {
-                      type: 'object',
-                      properties: {
-                        allowedOrigins: { type: 'string' },
-                        credentials: { type: 'boolean' }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        responses: { '200': { description: 'Status server' } }
       }
     }
   }
 };
 
 // ==========================================
-// SCALAR API REFERENCE HTML PAGE
+// DOCS PAGE - Pake Swagger UI (lebih stabil)
 // ==========================================
 router.get('/', (req, res) => {
-  const specJson = JSON.stringify(openApiSpec, null, 2);
-
   const html = `<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Absensi Sekolah - Documentation</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <title>API Absensi Sekolah - Dokumentasi</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        #app { height: 100vh; width: 100vw; }
+        body { background: #0f172a; }
         
-        /* Loading screen */
-        .loading-screen {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: #0f172a; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 9999;
-            transition: opacity 0.3s ease;
+        /* Top bar */
+        .topbar {
+            background: #1e293b;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .loading-screen.hidden { opacity: 0; pointer-events: none; }
-        .loading-spinner {
-            width: 50px; height: 50px; border: 4px solid #334155;
-            border-top-color: #60a5fa; border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+        .topbar h1 {
+            color: #e2e8f0;
+            font-size: 18px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { color: #94a3b8; margin-top: 16px; font-size: 14px; }
+        .topbar .badge {
+            background: #22c55e20;
+            color: #22c55e;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        .topbar .links {
+            display: flex;
+            gap: 12px;
+        }
+        .topbar .links a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 13px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        .topbar .links a:hover {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        
+        /* Swagger container */
+        #swagger-ui {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Override Swagger dark theme */
+        .swagger-ui {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .topbar { display: none; }
+        .swagger-ui .info .title {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .info {
+            margin: 20px 0;
+        }
+        .swagger-ui .scheme-container {
+            background: #1e293b !important;
+            border: 1px solid #334155 !important;
+            border-radius: 8px;
+            box-shadow: none !important;
+        }
+        .swagger-ui .opblock-tag {
+            color: #e2e8f0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+        .swagger-ui .opblock {
+            background: #1e293b !important;
+            border: 1px solid #334155 !important;
+            border-radius: 8px !important;
+            margin-bottom: 12px !important;
+            box-shadow: none !important;
+        }
+        .swagger-ui .opblock .opblock-summary {
+            border: none !important;
+        }
+        .swagger-ui .opblock .opblock-summary-description {
+            color: #94a3b8 !important;
+        }
+        .swagger-ui .opblock-description-wrapper,
+        .swagger-ui .opblock-external-docs-wrapper,
+        .swagger-ui .opblock-title_normal {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui table thead tr td, 
+        .swagger-ui table thead tr th {
+            color: #e2e8f0 !important;
+            border-bottom: 1px solid #334155 !important;
+        }
+        .swagger-ui .parameter__name {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .parameter__type {
+            color: #94a3b8 !important;
+        }
+        .swagger-ui .btn {
+            border: 1px solid #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .btn.authorize {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+        }
+        .swagger-ui .btn.execute {
+            background: #22c55e !important;
+            border-color: #22c55e !important;
+        }
+        .swagger-ui input[type=text] {
+            background: #0f172a !important;
+            border: 1px solid #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui textarea {
+            background: #0f172a !important;
+            border: 1px solid #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui select {
+            background: #0f172a !important;
+            border: 1px solid #334155 !important;
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .response-col_status {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .response-col_description {
+            color: #94a3b8 !important;
+        }
+        .swagger-ui .model-box {
+            background: #0f172a !important;
+        }
+        .swagger-ui .model {
+            color: #e2e8f0 !important;
+        }
+        .swagger-ui .loading-container {
+            background: #0f172a !important;
+        }
     </style>
 </head>
 <body>
-    <div class="loading-screen" id="loading">
-        <div class="loading-spinner"></div>
-        <div class="loading-text">Memuat Dokumentasi API...</div>
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h1>API Absensi Sekolah</h1>
+            <span class="badge">v${packageInfo.version || '2.0.0'}</span>
+        </div>
+        <div class="links">
+            <a href="/api/docs/json" target="_blank">JSON Spec</a>
+            <a href="/api/docs/download" target="_blank">Download</a>
+            <a href="/api/health" target="_blank">Health</a>
+        </div>
     </div>
-    <div id="app"></div>
 
-    <!-- Scalar API Reference -->
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.0/dist/standalone.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.25.0/dist/style.min.css">
-    
+    <!-- SWAGGER UI -->
+    <div id="swagger-ui"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
     <script>
-        // Hide loading screen after Scalar loads
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('loading').classList.add('hidden');
-                setTimeout(() => {
-                    const loadingEl = document.getElementById('loading');
-                    if (loadingEl) loadingEl.remove();
-                }, 300);
-            }, 1500);
-        });
-
-        // Fallback: hide loading after 5 seconds anyway
-        setTimeout(() => {
-            document.getElementById('loading').classList.add('hidden');
-        }, 5000);
-
-        // Scalar API Reference Configuration
-        Scalar.ApiReference(document.getElementById('app'), {
-            spec: ${specJson},
-            theme: 'purple',
-            darkMode: true,
-            hideDownloadButton: false,
-            showSidebar: true,
-            hideModels: false,
-            defaultHttpClient: {
-                targetKey: 'javascript',
-                clientKey: 'fetch'
-            },
-            // Authentication pre-fill
-            authentication: {
-                preferredSecurityScheme: 'bearerAuth',
-                securitySchemes: {
-                    bearerAuth: {
-                        type: 'http',
-                        scheme: 'bearer',
-                        bearerFormat: 'JWT'
-                    }
-                }
-            },
-            // Metadata
-            metaData: {
-                title: 'API Absensi Sekolah v2.0',
-                description: 'Dokumentasi interaktif API Absensi Sekolah',
-                'og:title': 'API Absensi Sekolah',
-                'og:description': 'Backend API untuk sistem absensi sekolah',
-                'og:type': 'website'
-            },
-            // Custom CSS
-            customCss: \`
-                .scalar-api-reference {
-                    --theme-background: #0f172a;
-                }
-            \`
-        });
+        window.onload = function() {
+            SwaggerUIBundle({
+                spec: ${JSON.stringify(openApiSpec)},
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: -1,
+                defaultModelExpandDepth: 1,
+                docExpansion: "list",
+                filter: true,
+                showExtensions: true,
+                showCommonExtensions: true,
+                tryItOutEnabled: true,
+                requestSnippetsEnabled: true,
+                persistAuthorization: true,
+            });
+        };
     </script>
 </body>
 </html>`;
@@ -1688,7 +1215,7 @@ router.get('/', (req, res) => {
 });
 
 // ==========================================
-// JSON SPEC (untuk import ke tools lain)
+// JSON SPEC
 // ==========================================
 router.get('/json', (req, res) => {
   res.json(openApiSpec);
