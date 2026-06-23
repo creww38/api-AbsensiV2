@@ -5,12 +5,20 @@ const packageInfo = require('../package.json');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://absensi-v3-kappa.vercel.app';
-const THUMBNAIL_URL = "https://www.image2url.com/r2/default/gifs/1782184371933-fc0a347c-c857-48c3-8127-cf0790d7f7b0.gif";
 
+// ══════════════════════════════════════
+// THUMBNAIL — GANTI DENGAN URL GAMBAR KAMU
+// ══════════════════════════════════════
+const THUMBNAIL_DARK = "https://www.image2url.com/r2/default/gifs/1782184371933-fc0a347c-c857-48c3-8127-cf0790d7f7b0.gif";  // untuk dark mode
+const THUMBNAIL_LIGHT = "https://i.ibb.co/placeholder/api-thumbnail-light.png"; // untuk light mode
+
+// ══════════════════════════════════════
+// SOCIAL MEDIA — GANTI DENGAN URL KAMU
+// ══════════════════════════════════════
 const SOCIALS = {
-  instagram: 'https://instagram.com/creww38',
-  tiktok: 'https://tiktok.com/creww38',
-  github: 'https://github.com/Creww38',
+  instagram: 'https://instagram.com/@creww38',
+  tiktok: 'https://tiktok.com/@creww38',
+  github: 'https://github.com/Creww38/Api-AbsensiV2',
   website: FRONTEND_URL
 };
 
@@ -20,7 +28,7 @@ const openApiSpec = {
     title: 'API Absensi Sekolah',
     version: packageInfo.version || '2.0.0',
     description: '## Backend API Sistem Absensi Sekolah\n\nSistem absensi berbasis **QR Code**, **WhatsApp Bot**, dan **Google Sheets**.\n\n**Frontend:** ' + FRONTEND_URL,
-    contact: { name: 'Developer', url: 'https://github.com/Creww38/Api-AbsensiV2' }
+    contact: { name: 'Developer', url: 'https://github.com/your-repo' }
   },
   servers: [{ url: BASE_URL, description: process.env.NODE_ENV === 'production' ? 'Production' : 'Local' }],
   security: [{ bearerAuth: [] }],
@@ -121,7 +129,9 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}:
 .hero-card{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--paper);border:var(--bd);box-shadow:var(--sh-lg);overflow:hidden;transition:transform .15s,box-shadow .15s}
 .hero-card:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink),12px 12px 0 rgba(0,0,0,.1)}
 .hero-img{position:relative;border-right:var(--bd);aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,var(--violet),var(--pink));display:grid;place-items:center}
-.hero-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s cubic-bezier(.16,1,.3,1);position:absolute;top:0;left:0}
+.hero-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s cubic-bezier(.16,1,.3,1),opacity .4s ease;position:absolute;top:0;left:0}
+.hero-img img.img-dark{opacity:1}.hero-img img.img-light{opacity:0}
+.light .hero-img img.img-dark{opacity:0}.light .hero-img img.img-light{opacity:1}
 .hero-card:hover .hero-img img{transform:scale(1.05)}
 .hero-img-fallback{font-family:var(--display);font-weight:800;font-size:clamp(3rem,8vw,7rem);color:var(--paper);opacity:.85;letter-spacing:-.03em;transform:rotate(-4deg);z-index:1}
 .hero-img-sub{position:absolute;bottom:20px;right:24px;font-family:var(--mono);font-size:11px;color:var(--paper);opacity:.6;z-index:1}
@@ -176,6 +186,24 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}:
 .token-bar input:focus{box-shadow:var(--sh-sm);transform:translate(-1px,-1px)}
 .token-bar button{font-family:var(--display);font-weight:700;font-size:11px;padding:8px 16px;background:var(--violet);color:#fff;border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);cursor:pointer;transition:all .12s;white-space:nowrap}
 .token-bar button:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+
+/* PAGE LOADER */
+.page-loader{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s ease}
+.page-loader.active{opacity:1;pointer-events:all}
+.loader-content{text-align:center;display:flex;flex-direction:column;align-items:center;gap:20px}
+.loader-bounce{display:flex;gap:10px}
+.loader-dot{width:20px;height:20px;border:3px solid var(--bg);animation:bounce .6s infinite alternate;border-radius:0}
+.loader-dot:nth-child(2){animation-delay:.15s}.loader-dot:nth-child(3){animation-delay:.3s}
+.loader-dot:nth-child(1){background:var(--pink)}.loader-dot:nth-child(2){background:var(--yellow)}.loader-dot:nth-child(3){background:var(--teal)}
+@keyframes bounce{to{transform:translateY(-24px)}}
+.loader-text{font-family:var(--display);font-weight:800;font-size:18px;color:var(--bg);letter-spacing:.04em;animation:pulse-text 1.2s ease-in-out infinite}
+@keyframes pulse-text{0%,100%{opacity:1}50%{opacity:.4}}
+.loader-sub{font-family:var(--mono);font-size:12px;color:var(--bg);opacity:.5}
+.loader-progress{width:200px;height:6px;border:2px solid var(--bg);margin-top:8px;overflow:hidden}
+.loader-progress-bar{height:100%;width:0;background:var(--lime);animation:progress-bar 1s ease-in-out forwards}
+@keyframes progress-bar{to{width:100%}}
+
+/* FOOTER */
 .site-footer{background:var(--ink);color:var(--bg);border-top:var(--bd);padding:44px 26px 26px;display:grid;grid-template-columns:1fr auto;gap:40px;align-items:start}
 .ft-big{font-family:var(--display);font-weight:800;font-size:clamp(2.5rem,8vw,5rem);line-height:.85;letter-spacing:-.03em;color:transparent;-webkit-text-stroke:2px var(--bg)}
 .ft-cols{display:flex;gap:44px;flex-wrap:wrap}
@@ -221,12 +249,19 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}:
   <main class="sidebar-inset" id="sidebarInset">
     <div class="hero-section">
       <div class="hero-card">
-        <div class="hero-img"><span class="hero-tag">v${version}</span><img src="${THUMBNAIL_URL}" alt="API Thumbnail" loading="lazy" onerror="this.style.display='none'"><div class="hero-img-fallback">{API}</div><div class="hero-img-sub">REST API v2.0</div></div>
+        <div class="hero-img">
+          <span class="hero-tag">v${version}</span>
+          <!-- DUA GAMBAR: dark & light -->
+          <img src="${THUMBNAIL_DARK}" alt="API Thumbnail Dark" class="img-dark" loading="lazy" onerror="this.style.display='none'">
+          <img src="${THUMBNAIL_LIGHT}" alt="API Thumbnail Light" class="img-light" loading="lazy" onerror="this.style.display='none'">
+          <div class="hero-img-fallback">{API}</div>
+          <div class="hero-img-sub">REST API v2.0</div>
+        </div>
         <div class="hero-body">
           <h2>API Absensi Sekolah</h2>
           <p>Backend API untuk sistem absensi berbasis <b>QR Code</b>, <b>WhatsApp Bot</b>, dan <b>Google Sheets</b>. Dibangun dengan Express.js + JWT Authentication.</p>
           <div class="hero-stats"><div class="hero-stat"><b>${endpointCount}</b>Endpoints</div><div class="hero-stat"><b>JWT</b>Auth</div><div class="hero-stat"><b>REST</b>API</div></div>
-          <div class="hero-cta"><a href="${FRONTEND_URL}" target="_blank" class="cta-primary">Buka Frontend</a><a href="/api/docs/json" target="_blank" class="cta-secondary">JSON Spec</a></div>
+          <div class="hero-cta"><a href="${FRONTEND_URL}" class="cta-primary frontend-link">Buka Frontend</a><a href="/api/docs/json" target="_blank" class="cta-secondary">JSON Spec</a></div>
         </div>
       </div>
     </div>
@@ -242,6 +277,16 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}:
       <div class="accordion" id="accordionContainer"></div>
     </div>
   </main>
+</div>
+
+<!-- PAGE LOADER -->
+<div class="page-loader" id="pageLoader">
+  <div class="loader-content">
+    <div class="loader-bounce"><div class="loader-dot"></div><div class="loader-dot"></div><div class="loader-dot"></div></div>
+    <div class="loader-text">MEMBUKA FRONTEND...</div>
+    <div class="loader-progress"><div class="loader-progress-bar"></div></div>
+    <div class="loader-sub">Mengarahkan ke ${FRONTEND_URL}</div>
+  </div>
 </div>
 
 <footer class="site-footer">
@@ -264,17 +309,8 @@ a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}:
 // ══════════════════════════════════════
 var globalToken = localStorage.getItem('api-token') || '';
 document.getElementById('globalToken').value = globalToken;
-
-function saveToken(){
-  globalToken = document.getElementById('globalToken').value.trim();
-  localStorage.setItem('api-token', globalToken);
-  alert('Token disimpan!');
-}
-function clearToken(){
-  globalToken = '';
-  document.getElementById('globalToken').value = '';
-  localStorage.removeItem('api-token');
-}
+function saveToken(){globalToken=document.getElementById('globalToken').value.trim();localStorage.setItem('api-token',globalToken);alert('Token disimpan!')}
+function clearToken(){globalToken='';document.getElementById('globalToken').value='';localStorage.removeItem('api-token')}
 
 // ══════════════════════════════════════
 // BUILD UI
@@ -282,278 +318,72 @@ function clearToken(){
 var spec = ${specJson};
 var paths = spec.paths;
 var grouped = {};
-Object.entries(paths).forEach(function(e){
-  var p=e[0],m=e[1];
-  Object.entries(m).forEach(function(x){
-    var mt=x[0],d=x[1];
-    var t=d.tags?d.tags[0]:'Other';
-    if(!grouped[t])grouped[t]=[];
-    grouped[t].push({path:p,method:mt.toUpperCase(),summary:d.summary,description:d.description,requestBody:d.requestBody,security:d.security});
-  });
-});
-
+Object.entries(paths).forEach(function(e){var p=e[0],m=e[1];Object.entries(m).forEach(function(x){var mt=x[0],d=x[1];var t=d.tags?d.tags[0]:'Other';if(!grouped[t])grouped[t]=[];grouped[t].push({path:p,method:mt.toUpperCase(),summary:d.summary,description:d.description,requestBody:d.requestBody,security:d.security})})});
 var sidebarNav=document.getElementById('sidebarNav');
 var accordionContainer=document.getElementById('accordionContainer');
-var allSidebarLinks=[];
-var gi=0;
+var allSidebarLinks=[];var gi=0;
 
-Object.entries(grouped).forEach(function(e){
-  var tag=e[0],eps=e[1];
-  var idx=gi;gi++;
-  
-  // SIDEBAR LINK
-  var link=document.createElement('a');
-  link.href='#group-'+idx;
-  link.textContent=tag;
-  link.setAttribute('data-tag',tag.toLowerCase());
-  link.addEventListener('click',function(ev){
-    ev.preventDefault();
-    var t=document.getElementById('group-'+idx);
-    if(t){
-      document.getElementById('scrollArea').scrollTo({top:t.offsetTop-20,behavior:'smooth'});
-      var tr=t.querySelector('.accordion-trigger');
-      if(tr&&tr.getAttribute('aria-expanded')!=='true')toggleAccordion(tr);
-      updateBreadcrumb(tag);
-    }
-    document.querySelectorAll('.sidebar-nav a').forEach(function(a){a.classList.remove('active')});
-    link.classList.add('active');
-  });
-  sidebarNav.appendChild(link);
-  allSidebarLinks.push({link:link,tag:tag.toLowerCase()});
-  
-  // ACCORDION ITEM
-  var item=document.createElement('div');
-  item.className='accordion-item';
-  item.id='group-'+idx;
-  var count=eps.length;
-  
-  var trigger=document.createElement('button');
-  trigger.className='accordion-trigger';
-  trigger.setAttribute('aria-expanded',idx===0?'true':'false');
-  trigger.onclick=function(){toggleAccordion(this)};
-  trigger.innerHTML='<span>'+tag+'</span><span style="display:flex;align-items:center;gap:8px;"><span class="badge">'+count+' endpoint'+(count>1?'s':'')+'</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
-  
-  var content=document.createElement('div');
-  content.className='accordion-content'+(idx===0?' open':'');
-  var inner=document.createElement('div');
-  inner.className='accordion-content-inner';
-  
-  eps.forEach(function(ep,epIdx){
-    var card=document.createElement('div');
-    card.className='ep-card';
-    var mc=ep.method.toLowerCase();
-    var epId='ep-'+idx+'-'+epIdx;
-    
-    // Build sample HTML
-    var sampleHTML='';
-    var sampleObj=null;
-    if(ep.requestBody){
-      var ex=ep.requestBody&&ep.requestBody.content&&ep.requestBody.content['application/json']&&ep.requestBody.content['application/json'].example;
-      if(ex){sampleObj=ex;sampleHTML='<div class="ep-sample"><strong>Request Body:</strong>\n'+JSON.stringify(ex,null,2)+'</div>';}
-    }
-    
-    // Path params
-    var pathParams='';
-    if(ep.path.indexOf('{')>-1){
-      var matches=ep.path.match(/\\{([^}]+)\\}/g);
-      if(matches){
-        pathParams='<div class="ep-desc" style="margin-top:4px"><strong>Path Params:</strong> '+matches.join(', ').replace(/[{}]/g,'')+'</div>';
-      }
-    }
-    
-    // Auth badge
-    var authBadge='';
-    if(ep.security&&ep.security.length>0){
-      authBadge='<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border:1.5px solid var(--ink);background:var(--yellow);margin-left:6px">AUTH</span>';
-    }else{
-      authBadge='<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border:1.5px solid var(--ink);background:var(--teal);margin-left:6px">PUBLIC</span>';
-    }
-    
-    var desc=(ep.summary||'')+(ep.description?' — '+ep.description.replace(/\\*\\*/g,'').replace(/\\n/g,' '):'');
-    
-    card.innerHTML=
-      '<div class="ep-head">'+
-        '<div class="ep-head-left">'+
-          '<span class="ep-method '+mc+'">'+ep.method+'</span>'+
-          '<span class="ep-path">'+ep.path+'</span>'+
-          authBadge+
-        '</div>'+
-        '<button class="ep-try-btn" id="try-'+epId+'" onclick="executeEndpoint(\''+epId+'\',\''+ep.method+'\',\''+ep.path.replace(/'/g,"\\'")+'\','+JSON.stringify(sampleObj)+','+(ep.security&&ep.security.length>0)+')">TRY IT</button>'+
-      '</div>'+
-      '<div class="ep-desc">'+desc+'</div>'+
-      pathParams+
-      sampleHTML+
-      '<div class="ep-result" id="result-'+epId+'">'+
-        '<div class="ep-result-header"><span class="ep-result-status" id="status-'+epId+'"></span><span id="time-'+epId+'" style="opacity:.6"></span></div>'+
-        '<pre class="ep-result-body" id="body-'+epId+'"></pre>'+
-      '</div>';
-    
-    inner.appendChild(card);
-  });
-  
-  content.appendChild(inner);
-  item.appendChild(trigger);
-  item.appendChild(content);
-  accordionContainer.appendChild(item);
-});
+Object.entries(grouped).forEach(function(e){var tag=e[0],eps=e[1];var idx=gi;gi++;
+var link=document.createElement('a');link.href='#group-'+idx;link.textContent=tag;link.setAttribute('data-tag',tag.toLowerCase());
+link.addEventListener('click',function(ev){ev.preventDefault();var t=document.getElementById('group-'+idx);if(t){document.getElementById('scrollArea').scrollTo({top:t.offsetTop-20,behavior:'smooth'});var tr=t.querySelector('.accordion-trigger');if(tr&&tr.getAttribute('aria-expanded')!=='true')toggleAccordion(tr);updateBreadcrumb(tag)}document.querySelectorAll('.sidebar-nav a').forEach(function(a){a.classList.remove('active')});link.classList.add('active')});
+sidebarNav.appendChild(link);allSidebarLinks.push({link:link,tag:tag.toLowerCase()});
+var item=document.createElement('div');item.className='accordion-item';item.id='group-'+idx;var count=eps.length;
+var trigger=document.createElement('button');trigger.className='accordion-trigger';trigger.setAttribute('aria-expanded',idx===0?'true':'false');trigger.onclick=function(){toggleAccordion(this)};trigger.innerHTML='<span>'+tag+'</span><span style="display:flex;align-items:center;gap:8px;"><span class="badge">'+count+' endpoint'+(count>1?'s':'')+'</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
+var content=document.createElement('div');content.className='accordion-content'+(idx===0?' open':'');var inner=document.createElement('div');inner.className='accordion-content-inner';
+eps.forEach(function(ep,epIdx){var card=document.createElement('div');card.className='ep-card';var mc=ep.method.toLowerCase();var epId='ep-'+idx+'-'+epIdx;
+var sampleHTML='';var sampleObj=null;
+if(ep.requestBody){var ex=ep.requestBody&&ep.requestBody.content&&ep.requestBody.content['application/json']&&ep.requestBody.content['application/json'].example;if(ex){sampleObj=ex;sampleHTML='<div class="ep-sample"><strong>Request Body:</strong>\n'+JSON.stringify(ex,null,2)+'</div>'}}
+var pathParams='';if(ep.path.indexOf('{')>-1){var matches=ep.path.match(/\{([^}]+)\}/g);if(matches){pathParams='<div class="ep-desc" style="margin-top:4px"><strong>Path Params:</strong> '+matches.join(', ').replace(/[{}]/g,'')+'</div>'}}
+var authBadge='';if(ep.security&&ep.security.length>0){authBadge='<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border:1.5px solid var(--ink);background:var(--yellow);margin-left:6px">AUTH</span>'}else{authBadge='<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border:1.5px solid var(--ink);background:var(--teal);margin-left:6px">PUBLIC</span>'}
+var desc=(ep.summary||'')+(ep.description?' — '+ep.description.replace(/\*\*/g,'').replace(/\n/g,' '):'');
+card.innerHTML='<div class="ep-head"><div class="ep-head-left"><span class="ep-method '+mc+'">'+ep.method+'</span><span class="ep-path">'+ep.path+'</span>'+authBadge+'</div><button class="ep-try-btn" id="try-'+epId+'" onclick="executeEndpoint(\''+epId+'\',\''+ep.method+'\',\''+ep.path.replace(/'/g,"\\'")+'\','+JSON.stringify(sampleObj)+','+(ep.security&&ep.security.length>0)+')">TRY IT</button></div><div class="ep-desc">'+desc+'</div>'+pathParams+sampleHTML+'<div class="ep-result" id="result-'+epId+'"><div class="ep-result-header"><span class="ep-result-status" id="status-'+epId+'"></span><span id="time-'+epId+'" style="opacity:.6"></span></div><pre class="ep-result-body" id="body-'+epId+'"></pre></div>';
+inner.appendChild(card)});
+content.appendChild(inner);item.appendChild(trigger);item.appendChild(content);accordionContainer.appendChild(item)});
 
 // ══════════════════════════════════════
 // EXECUTE ENDPOINT
 // ══════════════════════════════════════
-async function executeEndpoint(epId, method, path, sampleObj, needsAuth){
-  var resultDiv=document.getElementById('result-'+epId);
-  var statusEl=document.getElementById('status-'+epId);
-  var bodyEl=document.getElementById('body-'+epId);
-  var timeEl=document.getElementById('time-'+epId);
-  var btn=document.getElementById('try-'+epId);
-  
-  resultDiv.classList.add('show');
-  statusEl.textContent='LOADING...';
-  statusEl.className='ep-result-status';
-  bodyEl.textContent='Mengirim request...';
-  timeEl.textContent='';
-  btn.classList.add('loading');
-  btn.textContent='...';
-  
-  // Build URL
-  var url='${BASE_URL}'+path;
-  // Replace path params with user input
-  var pathParams=path.match(/\\{([^}]+)\\}/g);
-  if(pathParams){
-    pathParams.forEach(function(p){
-      var paramName=p.replace(/[{}]/g,'');
-      var val=prompt('Masukkan nilai untuk '+paramName+':', '');
-      if(val)url=url.replace(p,val);
-      else url=url.replace(p,paramName);
-    });
-  }
-  
-  var startTime=Date.now();
-  
-  try{
-    var headers={'Content-Type':'application/json'};
-    if(needsAuth&&globalToken){
-      headers['Authorization']='Bearer '+globalToken;
-    }
-    
-    var fetchOptions={method:method,headers:headers};
-    if(method!=='GET'&&method!=='HEAD'&&sampleObj){
-      fetchOptions.body=JSON.stringify(sampleObj);
-    }
-    
-    var response=await fetch(url,fetchOptions);
-    var elapsed=Date.now()-startTime;
-    var responseData=await response.text();
-    var formattedData;
-    try{
-      formattedData=JSON.stringify(JSON.parse(responseData),null,2);
-    }catch(e){
-      formattedData=responseData;
-    }
-    
-    if(response.ok){
-      statusEl.textContent=response.status+' OK';
-      statusEl.className='ep-result-status success';
-    }else{
-      statusEl.textContent=response.status+' ERROR';
-      statusEl.className='ep-result-status error';
-    }
-    bodyEl.textContent=formattedData;
-    timeEl.textContent=elapsed+'ms';
-  }catch(err){
-    statusEl.textContent='NETWORK ERROR';
-    statusEl.className='ep-result-status error';
-    bodyEl.textContent='Gagal terhubung: '+err.message+'\\n\\nPastikan server berjalan di '+url;
-    timeEl.textContent=(Date.now()-startTime)+'ms';
-  }
-  
-  btn.classList.remove('loading');
-  btn.textContent='TRY IT';
-}
+async function executeEndpoint(epId,method,path,sampleObj,needsAuth){var resultDiv=document.getElementById('result-'+epId);var statusEl=document.getElementById('status-'+epId);var bodyEl=document.getElementById('body-'+epId);var timeEl=document.getElementById('time-'+epId);var btn=document.getElementById('try-'+epId);resultDiv.classList.add('show');statusEl.textContent='LOADING...';statusEl.className='ep-result-status';bodyEl.textContent='Mengirim request...';timeEl.textContent='';btn.classList.add('loading');btn.textContent='...';var url='${BASE_URL}'+path;var pathParams=path.match(/\{([^}]+)\}/g);if(pathParams){pathParams.forEach(function(p){var paramName=p.replace(/[{}]/g,'');var val=prompt('Masukkan nilai untuk '+paramName+':','');if(val)url=url.replace(p,val);else url=url.replace(p,paramName)})}var startTime=Date.now();try{var headers={'Content-Type':'application/json'};if(needsAuth&&globalToken){headers['Authorization']='Bearer '+globalToken}var fetchOptions={method:method,headers:headers};if(method!=='GET'&&method!=='HEAD'&&sampleObj){fetchOptions.body=JSON.stringify(sampleObj)}var response=await fetch(url,fetchOptions);var elapsed=Date.now()-startTime;var responseData=await response.text();var formattedData;try{formattedData=JSON.stringify(JSON.parse(responseData),null,2)}catch(e){formattedData=responseData}if(response.ok){statusEl.textContent=response.status+' OK';statusEl.className='ep-result-status success'}else{statusEl.textContent=response.status+' ERROR';statusEl.className='ep-result-status error'}bodyEl.textContent=formattedData;timeEl.textContent=elapsed+'ms'}catch(err){statusEl.textContent='NETWORK ERROR';statusEl.className='ep-result-status error';bodyEl.textContent='Gagal terhubung: '+err.message+'\n\nPastikan server berjalan di '+url;timeEl.textContent=(Date.now()-startTime)+'ms'}btn.classList.remove('loading');btn.textContent='TRY IT'}
 
 // ══════════════════════════════════════
 // SIDEBAR TOGGLE
 // ══════════════════════════════════════
-var sidebar=document.getElementById('appSidebar');
-var triggerIcon=document.getElementById('triggerIcon');
-var isSidebarOpen=true;
-document.getElementById('sidebarTrigger').addEventListener('click',function(){
-  isSidebarOpen=!isSidebarOpen;
-  sidebar.classList.toggle('collapsed',!isSidebarOpen);
-  triggerIcon.innerHTML='&#9776;';
-  localStorage.setItem('sidebar-open',isSidebarOpen?'1':'0');
-});
-if(localStorage.getItem('sidebar-open')==='0'){
-  isSidebarOpen=false;
-  sidebar.classList.add('collapsed');
-}
+var sidebar=document.getElementById('appSidebar');var triggerIcon=document.getElementById('triggerIcon');var isSidebarOpen=true;
+document.getElementById('sidebarTrigger').addEventListener('click',function(){isSidebarOpen=!isSidebarOpen;sidebar.classList.toggle('collapsed',!isSidebarOpen);triggerIcon.innerHTML='&#9776;';localStorage.setItem('sidebar-open',isSidebarOpen?'1':'0')});
+if(localStorage.getItem('sidebar-open')==='0'){isSidebarOpen=false;sidebar.classList.add('collapsed')}
 
 // ══════════════════════════════════════
 // BREADCRUMB
 // ══════════════════════════════════════
-function updateBreadcrumb(tag){
-  document.getElementById('breadcrumbNav').innerHTML='<a href="#">API Docs</a><span class="separator">/</span><span class="current">'+tag+'</span>';
-}
+function updateBreadcrumb(tag){document.getElementById('breadcrumbNav').innerHTML='<a href="#">API Docs</a><span class="separator">/</span><span class="current">'+tag+'</span>'}
 
 // ══════════════════════════════════════
 // SEARCH
 // ══════════════════════════════════════
-var searchInput=document.getElementById('sidebarSearch');
-var noResult=document.getElementById('noResult');
-searchInput.addEventListener('input',function(){
-  var q=this.value.toLowerCase().trim();
-  var found=0;
-  allSidebarLinks.forEach(function(item){
-    if(q===''||item.tag.includes(q)){item.link.classList.remove('hidden');found++;}
-    else{item.link.classList.add('hidden')}
-  });
-  if(q!==''&&found===0){noResult.classList.add('show')}
-  else{noResult.classList.remove('show')}
-});
+var searchInput=document.getElementById('sidebarSearch');var noResult=document.getElementById('noResult');
+searchInput.addEventListener('input',function(){var q=this.value.toLowerCase().trim();var found=0;allSidebarLinks.forEach(function(item){if(q===''||item.tag.includes(q)){item.link.classList.remove('hidden');found++}else{item.link.classList.add('hidden')}});if(q!==''&&found===0){noResult.classList.add('show')}else{noResult.classList.remove('show')}});
 
 // ══════════════════════════════════════
 // ACCORDION
 // ══════════════════════════════════════
-function toggleAccordion(trigger){
-  var content=trigger.nextElementSibling;
-  var isOpen=content.classList.contains('open');
-  var parent=trigger.closest('.accordion');
-  if(parent){
-    parent.querySelectorAll('.accordion-content').forEach(function(c){c.classList.remove('open')});
-    parent.querySelectorAll('.accordion-trigger').forEach(function(t){t.setAttribute('aria-expanded','false')});
-  }
-  if(!isOpen){content.classList.add('open');trigger.setAttribute('aria-expanded','true');}
-}
+function toggleAccordion(trigger){var content=trigger.nextElementSibling;var isOpen=content.classList.contains('open');var parent=trigger.closest('.accordion');if(parent){parent.querySelectorAll('.accordion-content').forEach(function(c){c.classList.remove('open')});parent.querySelectorAll('.accordion-trigger').forEach(function(t){t.setAttribute('aria-expanded','false')})}if(!isOpen){content.classList.add('open');trigger.setAttribute('aria-expanded','true')}}
 
 // ══════════════════════════════════════
 // THEME
 // ══════════════════════════════════════
-var html=document.documentElement;
-var toggleBtns=document.querySelectorAll('#themeToggle button');
-var savedTheme=localStorage.getItem('api-docs-theme')||'dark';
-html.className=savedTheme;
+var html=document.documentElement;var toggleBtns=document.querySelectorAll('#themeToggle button');var savedTheme=localStorage.getItem('api-docs-theme')||'dark';html.className=savedTheme;
 toggleBtns.forEach(function(b){b.classList.toggle('active',b.dataset.theme===savedTheme)});
-toggleBtns.forEach(function(btn){
-  btn.addEventListener('click',function(){
-    var theme=btn.dataset.theme;
-    html.className=theme;
-    localStorage.setItem('api-docs-theme',theme);
-    toggleBtns.forEach(function(b){b.classList.toggle('active',b.dataset.theme===theme)});
-  });
-});
+toggleBtns.forEach(function(btn){btn.addEventListener('click',function(){var theme=btn.dataset.theme;html.className=theme;localStorage.setItem('api-docs-theme',theme);toggleBtns.forEach(function(b){b.classList.toggle('active',b.dataset.theme===theme)})})});
 
 // ══════════════════════════════════════
 // SCROLL SPY
 // ══════════════════════════════════════
-document.getElementById('scrollArea').addEventListener('scroll',function(){
-  var links=document.querySelectorAll('.sidebar-nav a:not(.hidden)');
-  var current='';
-  document.querySelectorAll('.accordion-item').forEach(function(item){
-    var rect=item.getBoundingClientRect();
-    if(rect.top<200)current=item.id;
-  });
-  links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+current)});
-});
+document.getElementById('scrollArea').addEventListener('scroll',function(){var links=document.querySelectorAll('.sidebar-nav a:not(.hidden)');var current='';document.querySelectorAll('.accordion-item').forEach(function(item){var rect=item.getBoundingClientRect();if(rect.top<200)current=item.id});links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+current)})});
+
+// ══════════════════════════════════════
+// ANIMASI REDIRECT FRONTEND
+// ══════════════════════════════════════
+document.querySelectorAll('a.frontend-link, a[href="${FRONTEND_URL}"]').forEach(function(link){link.addEventListener('click',function(e){if(link.getAttribute('target')==='_blank')return;e.preventDefault();var loader=document.getElementById('pageLoader');loader.classList.add('active');var bar=loader.querySelector('.loader-progress-bar');bar.style.animation='none';bar.offsetHeight;bar.style.animation='progress-bar 1s ease-in-out forwards';setTimeout(function(){window.location.href=link.href},1000)})});
 </script>
 </body>
 </html>`;
