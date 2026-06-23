@@ -4,7 +4,7 @@ const router = express.Router();
 const packageInfo = require('../package.json');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-const THUMBNAIL_URL = "https://jumpshare.com/share/BymC0ZQLNXv5gseuAVDb";
+const THUMBNAIL_URL = "https://www.image2url.com/r2/default/gifs/1782184371933-fc0a347c-c857-48c3-8127-cf0790d7f7b0.gif";
 
 const openApiSpec = {
   openapi: '3.1.0',
