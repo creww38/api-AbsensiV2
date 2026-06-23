@@ -5,12 +5,17 @@ const packageInfo = require('../package.json');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 
+// ══════════════════════════════════════
+// GANTI URL INI DENGAN URL GAMBAR KAMU
+// ══════════════════════════════════════
+const THUMBNAIL_URL = "https://jumpshare.com/folder/YHtlIEFvE0VbzxirKrQC"; // <-- GANTI DI SINI
+
 const openApiSpec = {
   openapi: '3.1.0',
   info: {
     title: 'API Absensi Sekolah',
     version: packageInfo.version || '2.0.0',
-    description: 'Backend API untuk sistem absensi sekolah berbasis QR Code, WhatsApp Bot, dan Google Sheets.',
+    description: '## Backend API Sistem Absensi Sekolah\n\nSistem absensi berbasis **QR Code**, **WhatsApp Bot**, dan **Google Sheets**.\n\n### Fitur\n- Absensi masuk/pulang\n- Monitoring realtime\n- Izin & Sakit\n- Export Excel\n- WhatsApp Gateway\n- Channel Berita',
     contact: { name: 'Developer', url: 'https://github.com/your-repo' }
   },
   servers: [{ url: BASE_URL, description: process.env.NODE_ENV === 'production' ? 'Production' : 'Local' }],
@@ -101,6 +106,7 @@ const openApiSpec = {
 router.get('/', (req, res) => {
   const specJson = JSON.stringify(openApiSpec);
   const endpointCount = Object.keys(openApiSpec.paths).length;
+  const version = packageInfo.version || '2.0.0';
 
   const html = `<!DOCTYPE html>
 <html lang="id" class="dark">
@@ -110,103 +116,73 @@ router.get('/', (req, res) => {
     <title>API Docs — Absensi Sekolah</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #ece7ff; --ink: #16101f; --paper: #ffffff;
-            --violet: #8b5cf6; --pink: #ff4d97; --teal: #14d6c4;
-            --yellow: #ffd633; --lime: #b4e82a; --orange: #ff7a3d;
-            --bd: 3px solid var(--ink); --sh: 6px 6px 0 var(--ink);
-            --sh-lg: 9px 9px 0 var(--ink); --sh-sm: 4px 4px 0 var(--ink);
-            --display: "Syne", sans-serif; --sans: "Space Grotesk", system-ui, sans-serif; --mono: "DM Mono", monospace;
-        }
-        .dark {
-            --bg: #0f0a1a; --ink: #e8e0f0; --paper: #1a1230;
-            --violet: #7c3aed; --pink: #f43f5e; --teal: #2dd4bf;
-            --yellow: #facc15; --lime: #a3e635; --orange: #f97316;
-            --bd: 3px solid var(--ink); --sh: 6px 6px 0 var(--ink);
-            --sh-lg: 9px 9px 0 var(--ink); --sh-sm: 4px 4px 0 var(--ink);
-        }
+        :root{--bg:#ece7ff;--ink:#16101f;--paper:#fff;--violet:#8b5cf6;--pink:#ff4d97;--teal:#14d6c4;--yellow:#ffd633;--lime:#b4e82a;--orange:#ff7a3d;--bd:3px solid var(--ink);--sh:6px 6px 0 var(--ink);--sh-lg:9px 9px 0 var(--ink);--sh-sm:4px 4px 0 var(--ink);--display:"Syne",sans-serif;--sans:"Space Grotesk",system-ui,sans-serif;--mono:"DM Mono",monospace}
+        .dark{--bg:#0f0a1a;--ink:#e8e0f0;--paper:#1a1230;--violet:#7c3aed;--pink:#f43f5e;--teal:#2dd4bf;--yellow:#facc15;--lime:#a3e635;--orange:#f97316;--bd:3px solid var(--ink);--sh:6px 6px 0 var(--ink);--sh-lg:9px 9px 0 var(--ink);--sh-sm:4px 4px 0 var(--ink)}
         *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-        body{
-            background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;
-            -webkit-font-smoothing:antialiased;
-            background-image:radial-gradient(var(--ink) 1.2px,transparent 1.2px);
-            background-size:26px 26px;background-position:-13px -13px;
-            transition:background 0.3s,color 0.3s;min-height:100vh;
-        }
+        body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;background-image:radial-gradient(var(--ink) 1.2px,transparent 1.2px);background-size:26px 26px;background-position:-13px -13px;transition:background .3s,color .3s;min-height:100vh}
         a{color:inherit;text-decoration:none}button{font-family:inherit;cursor:pointer}
         ::selection{background:var(--yellow);color:var(--ink)}
 
-        /* MARQUEE */
         .marquee{background:var(--ink);color:var(--bg);border-bottom:var(--bd);overflow:hidden;white-space:nowrap;padding:9px 0}
-        .marquee-track{display:inline-flex;gap:40px;animation:scroll 22s linear infinite;font-family:var(--mono);font-size:12.5px;font-weight:500;letter-spacing:0.1em;padding-left:40px}
+        .marquee-track{display:inline-flex;gap:40px;animation:scroll 22s linear infinite;font-family:var(--mono);font-size:12.5px;font-weight:500;letter-spacing:.1em;padding-left:40px}
         @keyframes scroll{to{transform:translateX(-50%)}}
 
-        /* HEADER */
-        .site-header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 26px;background:var(--bg);border-bottom:var(--bd);transition:background 0.3s}
-        .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-0.02em}
+        .site-header{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 26px;background:var(--bg);border-bottom:var(--bd);transition:background .3s}
+        .logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em}
         .logo-icon{display:grid;place-items:center;width:38px;height:38px;background:var(--yellow);border:var(--bd);box-shadow:var(--sh-sm);font-family:var(--display);font-weight:800;font-size:18px;transform:rotate(-4deg)}
         .main-nav{display:flex;gap:6px;align-items:center}
-        .main-nav a,.main-nav button{font-family:var(--mono);font-size:13px;font-weight:500;padding:8px 14px;border:2px solid transparent;transition:all 0.15s;background:none;color:var(--ink)}
+        .main-nav a,.main-nav button{font-family:var(--mono);font-size:13px;font-weight:500;padding:8px 14px;border:2px solid transparent;transition:all .15s;background:none;color:var(--ink)}
         .main-nav a:hover,.main-nav button:hover{border-color:var(--ink);background:var(--paper)}
         .main-nav a.active{background:var(--violet);color:var(--paper);border-color:var(--ink);box-shadow:var(--sh-sm)}
         .theme-toggle{display:flex;align-items:center;background:var(--paper);border:var(--bd);border-radius:999px;padding:3px;box-shadow:var(--sh-sm)}
-        .theme-toggle button{width:34px;height:30px;border-radius:999px;border:none;background:transparent;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--mono);font-weight:500}
+        .theme-toggle button{width:34px;height:30px;border-radius:999px;border:none;background:0 0;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);font-family:var(--mono);font-weight:500}
         .theme-toggle button.active{background:var(--ink);color:var(--bg);font-weight:700}
 
-        /* HERO IMAGE CARD */
         .hero-section{max-width:1240px;margin:0 auto;padding:30px 26px 10px}
-        .hero-card{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--paper);border:var(--bd);box-shadow:var(--sh-lg);overflow:hidden;transition:transform 0.15s,box-shadow 0.15s}
-        .hero-card:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink),12px 12px 0 rgba(0,0,0,0.1)}
+        .hero-card{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--paper);border:var(--bd);box-shadow:var(--sh-lg);overflow:hidden;transition:transform .15s,box-shadow .15s}
+        .hero-card:hover{transform:translate(-3px,-3px);box-shadow:9px 9px 0 var(--ink),12px 12px 0 rgba(0,0,0,.1)}
         .hero-img{position:relative;border-right:var(--bd);aspect-ratio:16/10;overflow:hidden;background:linear-gradient(135deg,var(--violet),var(--pink));display:grid;place-items:center}
-        .hero-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s cubic-bezier(0.16,1,0.3,1);position:absolute;top:0;left:0}
+        .hero-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s cubic-bezier(.16,1,.3,1);position:absolute;top:0;left:0}
         .hero-card:hover .hero-img img{transform:scale(1.05)}
-        .hero-img-placeholder{font-family:var(--display);font-weight:800;font-size:clamp(3rem,8vw,7rem);color:var(--paper);opacity:0.85;letter-spacing:-0.03em;transform:rotate(-4deg);z-index:1}
-        .hero-img-sub{position:absolute;bottom:20px;right:24px;font-family:var(--mono);font-size:11px;color:var(--paper);opacity:0.6;z-index:1}
-        .hero-tag{position:absolute;top:14px;left:14px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:0.04em;padding:6px 12px;border:var(--bd);box-shadow:var(--sh-sm);z-index:2;transform:rotate(-4deg)}
-        .hero-tag.new{background:var(--lime)}
+        .hero-img-fallback{font-family:var(--display);font-weight:800;font-size:clamp(3rem,8vw,7rem);color:var(--paper);opacity:.85;letter-spacing:-.03em;transform:rotate(-4deg);z-index:1}
+        .hero-img-sub{position:absolute;bottom:20px;right:24px;font-family:var(--mono);font-size:11px;color:var(--paper);opacity:.6;z-index:1}
+        .hero-tag{position:absolute;top:14px;left:14px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.04em;padding:6px 12px;border:var(--bd);box-shadow:var(--sh-sm);z-index:2;transform:rotate(-4deg);background:var(--lime)}
         .hero-body{padding:24px 28px;display:flex;flex-direction:column;justify-content:center;gap:12px}
-        .hero-body h2{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1;letter-spacing:-0.02em}
-        .hero-body p{font-size:14px;opacity:0.8;line-height:1.6}
+        .hero-body h2{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1;letter-spacing:-.02em}
+        .hero-body p{font-size:14px;opacity:.8;line-height:1.6}
         .hero-stats{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
         .hero-stat{background:var(--bg);border:2px solid var(--ink);padding:8px 14px;font-family:var(--mono);font-size:11px;font-weight:500}
         .hero-stat b{font-family:var(--display);font-size:18px;display:block;line-height:1}
 
-        /* LAYOUT */
         .layout{max-width:1240px;margin:0 auto;padding:20px 26px 60px;display:grid;grid-template-columns:240px 1fr;gap:26px;align-items:start}
         .sidebar{position:sticky;top:80px;background:var(--paper);border:var(--bd);box-shadow:var(--sh);padding:0;max-height:calc(100vh - 100px);overflow:hidden;display:flex;flex-direction:column}
-        .sidebar-title{font-family:var(--display);font-weight:800;font-size:14px;padding:16px 18px;border-bottom:var(--bd);letter-spacing:-0.01em}
+        .sidebar-title{font-family:var(--display);font-weight:800;font-size:14px;padding:16px 18px;border-bottom:var(--bd);letter-spacing:-.01em}
         .sidebar-nav{overflow-y:auto;flex:1;padding:8px}
-        .sidebar-nav a{display:block;font-family:var(--mono);font-size:12px;font-weight:500;padding:8px 12px;margin-bottom:2px;border:2px solid transparent;transition:all 0.12s;border-radius:0}
+        .sidebar-nav a{display:block;font-family:var(--mono);font-size:12px;font-weight:500;padding:8px 12px;margin-bottom:2px;border:2px solid transparent;transition:all .12s}
         .sidebar-nav a:hover,.sidebar-nav a.active{border-color:var(--ink);background:var(--violet);color:var(--paper);box-shadow:var(--sh-sm)}
 
-        /* SCROLL AREA */
         .content-area{min-width:0}
         .scroll-area{background:var(--paper);border:var(--bd);box-shadow:var(--sh);max-height:calc(100vh - 100px);overflow-y:auto;padding:20px}
 
-        /* ACCORDION */
         .accordion{border:none}
-        .accordion-item{border-bottom:2px solid var(--ink);margin-bottom:0}
+        .accordion-item{border-bottom:2px solid var(--ink)}
         .accordion-item:last-child{border-bottom:none}
-        .accordion-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg);border:none;font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;transition:background 0.15s;text-align:left;border-bottom:2px solid var(--ink)}
+        .accordion-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg);border:none;font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink);cursor:pointer;transition:background .15s;text-align:left;border-bottom:2px solid var(--ink)}
         .accordion-trigger:hover{background:var(--violet);color:var(--paper)}
-        .accordion-trigger .chevron{width:16px;height:16px;flex-shrink:0;transition:transform 0.3s}
-        .accordion-trigger[aria-expanded="true"] .chevron{transform:rotate(180deg)}
+        .accordion-trigger .chevron{width:16px;height:16px;flex-shrink:0;transition:transform .3s}
+        .accordion-trigger[aria-expanded=true] .chevron{transform:rotate(180deg)}
         .accordion-trigger .badge{font-family:var(--mono);font-size:10px;padding:2px 8px;border:2px solid var(--ink);margin-left:10px;background:var(--paper)}
-        .accordion-content{overflow:hidden;max-height:0;transition:max-height 0.4s ease,padding 0.4s ease}
+        .accordion-content{overflow:hidden;max-height:0;transition:max-height .4s ease,padding .4s ease}
         .accordion-content.open{max-height:8000px;padding:0}
         .accordion-content-inner{font-size:13px;line-height:1.6;padding:12px 16px 16px}
 
-        /* ENDPOINT CARD */
-        .ep-card{background:var(--bg);border:2px solid var(--ink);padding:14px 16px;margin-bottom:10px;transition:all 0.12s;display:flex;align-items:flex-start;gap:12px}
+        .ep-card{background:var(--bg);border:2px solid var(--ink);padding:14px 16px;margin-bottom:10px;transition:all .12s;display:flex;align-items:flex-start;gap:12px}
         .ep-card:hover{box-shadow:var(--sh-sm);transform:translate(-1px,-1px)}
-        .ep-method{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:0.05em;padding:4px 10px;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);flex-shrink:0;white-space:nowrap}
-        .ep-method.get{background:var(--teal);color:var(--ink)}
-        .ep-method.post{background:var(--violet);color:#fff}
-        .ep-method.put{background:var(--yellow);color:var(--ink)}
-        .ep-method.delete{background:var(--pink);color:#fff}
-        .ep-info{flex:1;min-width:0}
-        .ep-path{font-family:var(--mono);font-size:12px;font-weight:600;word-break:break-all}
-        .ep-desc{font-size:12px;opacity:0.7;margin-top:3px;line-height:1.4}
+        .ep-method{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.05em;padding:4px 10px;border:2.5px solid var(--ink);box-shadow:2px 2px 0 var(--ink);flex-shrink:0;white-space:nowrap}
+        .ep-method.get{background:var(--teal);color:var(--ink)}.ep-method.post{background:var(--violet);color:#fff}
+        .ep-method.put{background:var(--yellow);color:var(--ink)}.ep-method.delete{background:var(--pink);color:#fff}
+        .ep-info{flex:1;min-width:0}.ep-path{font-family:var(--mono);font-size:12px;font-weight:600;word-break:break-all}
+        .ep-desc{font-size:12px;opacity:.7;margin-top:3px;line-height:1.4}
         .ep-sample{font-family:var(--mono);font-size:11px;background:var(--paper);border:2px solid var(--ink);padding:10px 12px;margin-top:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
 
         @media(max-width:860px){.layout{grid-template-columns:1fr}.sidebar{position:static;max-height:none;margin-bottom:16px}.sidebar-nav{max-height:200px}.hero-card{grid-template-columns:1fr}.hero-img{border-right:none;border-bottom:var(--bd);aspect-ratio:2/1}}
@@ -215,8 +191,8 @@ router.get('/', (req, res) => {
 </head>
 <body>
     <div class="marquee"><div class="marquee-track">
-        <span>API ABSENSI SEKOLAH v${packageInfo.version||'2.0.0'}</span><span>QR CODE</span><span>WHATSAPP BOT</span><span>GOOGLE SHEETS</span><span>MONITORING</span><span>EXPORT EXCEL</span><span>IZIN & SAKIT</span><span>PENGUMUMAN</span><span>CHANNEL BERITA</span>
-        <span>API ABSENSI SEKOLAH v${packageInfo.version||'2.0.0'}</span><span>QR CODE</span><span>WHATSAPP BOT</span><span>GOOGLE SHEETS</span><span>MONITORING</span><span>EXPORT EXCEL</span><span>IZIN & SAKIT</span><span>PENGUMUMAN</span><span>CHANNEL BERITA</span>
+        <span>API ABSENSI SEKOLAH v${version}</span><span>QR CODE</span><span>WHATSAPP BOT</span><span>GOOGLE SHEETS</span><span>MONITORING</span><span>EXPORT EXCEL</span><span>IZIN & SAKIT</span><span>PENGUMUMAN</span><span>CHANNEL BERITA</span>
+        <span>API ABSENSI SEKOLAH v${version}</span><span>QR CODE</span><span>WHATSAPP BOT</span><span>GOOGLE SHEETS</span><span>MONITORING</span><span>EXPORT EXCEL</span><span>IZIN & SAKIT</span><span>PENGUMUMAN</span><span>CHANNEL BERITA</span>
     </div></div>
 
     <header class="site-header">
@@ -235,9 +211,9 @@ router.get('/', (req, res) => {
     <div class="hero-section">
         <div class="hero-card">
             <div class="hero-img">
-                <span class="hero-tag new">v${packageInfo.version||'2.0.0'}</span>
-                <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="API Code" loading="lazy" onerror="this.style.display='none'">
-                <div class="hero-img-placeholder">{API}</div>
+                <span class="hero-tag">v${version}</span>
+                <img src="${THUMBNAIL_URL}" alt="API Thumbnail" loading="lazy" onerror="this.style.display='none'">
+                <div class="hero-img-fallback">{API}</div>
                 <div class="hero-img-sub">REST API v2.0</div>
             </div>
             <div class="hero-body">
@@ -257,7 +233,6 @@ router.get('/', (req, res) => {
             <div class="sidebar-title">NAVIGASI</div>
             <nav class="sidebar-nav" id="sidebarNav"></nav>
         </aside>
-
         <div class="content-area">
             <div class="scroll-area" id="scrollArea">
                 <div class="accordion" id="accordionContainer"></div>
@@ -266,91 +241,81 @@ router.get('/', (req, res) => {
     </div>
 
     <script>
-        const spec = ${specJson};
-        const paths = spec.paths;
-
-        const grouped = {};
-        Object.entries(paths).forEach(([path, methods]) => {
-            Object.entries(methods).forEach(([method, def]) => {
-                const tag = def.tags ? def.tags[0] : 'Other';
+        var spec = ${specJson};
+        var paths = spec.paths;
+        var grouped = {};
+        Object.entries(paths).forEach(function(entry) {
+            var path = entry[0], methods = entry[1];
+            Object.entries(methods).forEach(function(m) {
+                var method = m[0], def = m[1];
+                var tag = def.tags ? def.tags[0] : 'Other';
                 if (!grouped[tag]) grouped[tag] = [];
-                grouped[tag].push({ path, method: method.toUpperCase(), ...def });
+                grouped[tag].push({ path: path, method: method.toUpperCase(), summary: def.summary, description: def.description, requestBody: def.requestBody });
             });
         });
 
-        const sidebarNav = document.getElementById('sidebarNav');
-        const accordionContainer = document.getElementById('accordionContainer');
+        var sidebarNav = document.getElementById('sidebarNav');
+        var accordionContainer = document.getElementById('accordionContainer');
+        var groupIndex = 0;
 
-        Object.entries(grouped).forEach(([tag, endpoints], groupIndex) => {
-            // SIDEBAR
-            const link = document.createElement('a');
-            link.href = '#group-' + groupIndex;
+        Object.entries(grouped).forEach(function(entry) {
+            var tag = entry[0], endpoints = entry[1];
+            var idx = groupIndex;
+            groupIndex++;
+
+            // SIDEBAR LINK
+            var link = document.createElement('a');
+            link.href = '#group-' + idx;
             link.textContent = tag;
-            link.addEventListener('click', (e) => {
+            link.addEventListener('click', function(e) {
                 e.preventDefault();
-                const target = document.getElementById('group-' + groupIndex);
+                var target = document.getElementById('group-' + idx);
                 if (target) {
                     document.getElementById('scrollArea').scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
-                    const trigger = target.querySelector('.accordion-trigger');
+                    var trigger = target.querySelector('.accordion-trigger');
                     if (trigger && trigger.getAttribute('aria-expanded') !== 'true') {
                         toggleAccordion(trigger);
                     }
                 }
-                document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+                document.querySelectorAll('.sidebar-nav a').forEach(function(a) { a.classList.remove('active'); });
                 link.classList.add('active');
             });
             sidebarNav.appendChild(link);
 
-            // ACCORDION
-            const item = document.createElement('div');
+            // ACCORDION ITEM
+            var item = document.createElement('div');
             item.className = 'accordion-item';
-            item.id = 'group-' + groupIndex;
-            const count = endpoints.length;
+            item.id = 'group-' + idx;
+            var count = endpoints.length;
 
-            const trigger = document.createElement('button');
+            var trigger = document.createElement('button');
             trigger.className = 'accordion-trigger';
-            trigger.setAttribute('aria-expanded', groupIndex === 0 ? 'true' : 'false');
+            trigger.setAttribute('aria-expanded', idx === 0 ? 'true' : 'false');
             trigger.onclick = function() { toggleAccordion(this); };
             trigger.innerHTML = '<span>' + tag + '</span><span style="display:flex;align-items:center;gap:8px;"><span class="badge">' + count + ' endpoint' + (count > 1 ? 's' : '') + '</span><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></span>';
 
-            const content = document.createElement('div');
-            content.className = 'accordion-content' + (groupIndex === 0 ? ' open' : '');
-
-            const inner = document.createElement('div');
+            var content = document.createElement('div');
+            content.className = 'accordion-content' + (idx === 0 ? ' open' : '');
+            var inner = document.createElement('div');
             inner.className = 'accordion-content-inner';
 
-            endpoints.forEach(ep => {
-                const card = document.createElement('div');
+            endpoints.forEach(function(ep) {
+                var card = document.createElement('div');
                 card.className = 'ep-card';
-                const methodClass = ep.method.toLowerCase();
-
-                let sampleHTML = '';
+                var mc = ep.method.toLowerCase();
+                var sampleHTML = '';
                 if (ep.requestBody) {
-                    const example = ep.requestBody?.content?.['application/json']?.example;
-                    const schema = ep.requestBody?.content?.['application/json']?.schema;
+                    var example = ep.requestBody && ep.requestBody.content && ep.requestBody.content['application/json'] && ep.requestBody.content['application/json'].example;
                     if (example) {
                         sampleHTML = '<div class="ep-sample">' + JSON.stringify(example, null, 2).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
-                    } else if (schema?.properties) {
-                        const sample = {};
-                        Object.entries(schema.properties).forEach(([k, v]) => {
-                            if (v.example) sample[k] = v.example;
-                            else if (v.type === 'string') sample[k] = v.enum ? v.enum[0] : 'string';
-                            else if (v.type === 'integer') sample[k] = 0;
-                            else if (v.type === 'boolean') sample[k] = false;
-                        });
-                        if (Object.keys(sample).length > 0) {
-                            sampleHTML = '<div class="ep-sample">' + JSON.stringify(sample, null, 2).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
-                        }
                     }
                 }
-
-                card.innerHTML = '<span class="ep-method ' + methodClass + '">' + ep.method + '</span>' +
+                card.innerHTML = '<span class="ep-method ' + mc + '">' + ep.method + '</span>' +
                     '<div class="ep-info">' +
                         '<div class="ep-path">' + ep.path + '</div>' +
                         '<div class="ep-desc">' + (ep.summary || '') + (ep.description ? ' — ' + ep.description.replace(/\*\*/g, '').replace(/\n/g, ' ') : '') + '</div>' +
                         sampleHTML +
                     '</div>';
-
                 inner.appendChild(card);
             });
 
@@ -361,43 +326,40 @@ router.get('/', (req, res) => {
         });
 
         function toggleAccordion(trigger) {
-            const content = trigger.nextElementSibling;
-            const isOpen = content.classList.contains('open');
-            const parent = trigger.closest('.accordion');
+            var content = trigger.nextElementSibling;
+            var isOpen = content.classList.contains('open');
+            var parent = trigger.closest('.accordion');
             if (parent) {
-                parent.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
-                parent.querySelectorAll('.accordion-trigger').forEach(t => t.setAttribute('aria-expanded', 'false'));
+                parent.querySelectorAll('.accordion-content').forEach(function(c) { c.classList.remove('open'); });
+                parent.querySelectorAll('.accordion-trigger').forEach(function(t) { t.setAttribute('aria-expanded', 'false'); });
             }
-            if (!isOpen) {
-                content.classList.add('open');
-                trigger.setAttribute('aria-expanded', 'true');
-            }
+            if (!isOpen) { content.classList.add('open'); trigger.setAttribute('aria-expanded', 'true'); }
         }
 
         // THEME
-        const html = document.documentElement;
-        const toggleBtns = document.querySelectorAll('#themeToggle button');
-        const savedTheme = localStorage.getItem('api-docs-theme') || 'dark';
+        var html = document.documentElement;
+        var toggleBtns = document.querySelectorAll('#themeToggle button');
+        var savedTheme = localStorage.getItem('api-docs-theme') || 'dark';
         html.className = savedTheme;
-        toggleBtns.forEach(b => b.classList.toggle('active', b.dataset.theme === savedTheme));
-        toggleBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const theme = btn.dataset.theme;
+        toggleBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.theme === savedTheme); });
+        toggleBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var theme = btn.dataset.theme;
                 html.className = theme;
                 localStorage.setItem('api-docs-theme', theme);
-                toggleBtns.forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+                toggleBtns.forEach(function(b) { b.classList.toggle('active', b.dataset.theme === theme); });
             });
         });
 
         // SCROLL SPY
         document.getElementById('scrollArea').addEventListener('scroll', function() {
-            const links = document.querySelectorAll('.sidebar-nav a');
-            let current = '';
-            document.querySelectorAll('.accordion-item').forEach(item => {
-                const rect = item.getBoundingClientRect();
+            var links = document.querySelectorAll('.sidebar-nav a');
+            var current = '';
+            document.querySelectorAll('.accordion-item').forEach(function(item) {
+                var rect = item.getBoundingClientRect();
                 if (rect.top < 200) current = item.id;
             });
-            links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+            links.forEach(function(a) { a.classList.toggle('active', a.getAttribute('href') === '#' + current); });
         });
     </script>
 </body>
