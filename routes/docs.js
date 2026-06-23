@@ -7,13 +7,13 @@ const fs = require('fs');
 
 const BASE_URL = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://absensi-v3-kappa.vercel.app';
-const THUMBNAIL_DARK = 'https://i.ibb.co/placeholder/api-thumbnail-dark.png';
+const THUMBNAIL_DARK = 'https://www.image2url.com/r2/default/gifs/1782184371933-fc0a347c-c857-48c3-8127-cf0790d7f7b0.gif';
 const THUMBNAIL_LIGHT = 'https://i.ibb.co/placeholder/api-thumbnail-light.png';
 
 const SOCIALS = {
   instagram: 'https://instagram.com/creww38',
   tiktok: 'https://tiktok.com/@creww38',
-  github: 'https://github.com/creww8/Api-Absensi-Sekolah',
+  github: 'https://github.com/Creww38/Api-AbsensiV2',
 };
 
 const openApiSpec = {
