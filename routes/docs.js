@@ -11,7 +11,7 @@ const openApiSpec = {
     title: 'API Absensi Sekolah',
     version: packageInfo.version || '2.0.0',
     description: '## Backend API Sistem Absensi Sekolah\n\nSistem absensi berbasis **QR Code**, **WhatsApp Bot**, dan **Google Sheets**.\n\n### Fitur\n- Absensi masuk/pulang\n- Monitoring realtime\n- Izin & Sakit\n- Export Excel\n- WhatsApp Gateway\n- Channel Berita',
-    contact: { name: 'Developer', url: 'https://github.com/your-repo' }
+    contact: { name: 'Developer', url: 'https://github.com/Creww38/Api-AbsensiV2' }
   },
   servers: [{ url: BASE_URL, description: process.env.NODE_ENV === 'production' ? 'Production' : 'Local' }],
   security: [{ bearerAuth: [] }],
@@ -24,7 +24,6 @@ const openApiSpec = {
     '/api/auth/login': {
       post: {
         tags: ['Auth'], summary: 'Login', operationId: 'authLogin',
-        description: '**Guru/Admin:** username & password.\n**Siswa:** NISN atau Nama.',
         security: [],
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { username: { type: 'string', example: 'admin' }, password: { type: 'string', example: 'admin123' }, nisn: { type: 'string', example: '1234567890' } } } } } },
         responses: { '200': { description: 'Success' }, '401': { description: 'Unauthorized' } }
@@ -35,7 +34,6 @@ const openApiSpec = {
     '/api/absensi/scan': {
       post: {
         tags: ['Absensi'], summary: 'Scan Absensi', operationId: 'absensiScan',
-        description: 'Scan absensi masuk/pulang. Auto-detect type.',
         requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['nisn'], properties: { nisn: { type: 'string', example: '1234567890' }, scannerRole: { type: 'string', enum: ['guru', 'admin'] }, scannerKelas: { type: 'string' } } } } } },
         responses: { '200': { description: 'Success' } }
       }
@@ -108,164 +106,292 @@ router.get('/', (req, res) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Docs — Absensi Sekolah</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* ═══════════════════════════════ */
-        /* CSS VARIABLES                  */
-        /* ═══════════════════════════════ */
+        /* ══════════════════════════════════════ */
+        /* DESIGN TOKENS                        */
+        /* ══════════════════════════════════════ */
         :root {
-            --bg: #ffffff;
-            --text: #0f172a;
-            --text-dim: #64748b;
-            --card: #ffffff;
-            --card-hover: #f8fafc;
-            --border: #e2e8f0;
-            --border-hover: #cbd5e1;
-            --accent: #3b82f6;
-            --accent-light: #eff6ff;
-            --shadow-3d: 4px 4px 0px #0f172a;
-            --shadow-3d-hover: 6px 6px 0px #0f172a;
-            --shadow-3d-active: 2px 2px 0px #0f172a;
-            --grid-dot: #e2e8f0;
-            --topbar-bg: rgba(255,255,255,0.85);
+            --bg: #ece7ff;
+            --ink: #16101f;
+            --paper: #ffffff;
+            --violet: #8b5cf6;
+            --pink: #ff4d97;
+            --teal: #14d6c4;
+            --yellow: #ffd633;
+            --lime: #b4e82a;
+            --orange: #ff7a3d;
+            --bd: 3px solid var(--ink);
+            --sh: 6px 6px 0 var(--ink);
+            --sh-lg: 9px 9px 0 var(--ink);
+            --sh-sm: 4px 4px 0 var(--ink);
+            --display: "Syne", sans-serif;
+            --sans: "Space Grotesk", system-ui, sans-serif;
+            --mono: "DM Mono", monospace;
         }
 
         .dark {
-            --bg: #0b1121;
-            --text: #e2e8f0;
-            --text-dim: #94a3b8;
-            --card: #131b2e;
-            --card-hover: #1a2540;
-            --border: #1e2d4a;
-            --border-hover: #2d3f5f;
-            --accent: #60a5fa;
-            --accent-light: #1e293b;
-            --shadow-3d: 4px 4px 0px #60a5fa;
-            --shadow-3d-hover: 6px 6px 0px #60a5fa;
-            --shadow-3d-active: 2px 2px 0px #60a5fa;
-            --grid-dot: #1e2d4a;
-            --topbar-bg: rgba(11,17,33,0.85);
+            --bg: #0f0a1a;
+            --ink: #e8e0f0;
+            --paper: #1a1230;
+            --violet: #7c3aed;
+            --pink: #f43f5e;
+            --teal: #2dd4bf;
+            --yellow: #facc15;
+            --lime: #a3e635;
+            --orange: #f97316;
+            --bd: 3px solid var(--ink);
+            --sh: 6px 6px 0 var(--ink);
+            --sh-lg: 9px 9px 0 var(--ink);
+            --sh-sm: 4px 4px 0 var(--ink);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        /* ═══════════════════════════════ */
-        /* GRID BACKGROUND               */
-        /* ═══════════════════════════════ */
         body {
             background: var(--bg);
-            background-image: radial-gradient(circle, var(--grid-dot) 1px, transparent 1px);
-            background-size: 24px 24px;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: var(--text);
+            color: var(--ink);
+            font-family: var(--sans);
+            font-size: 15px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
-            transition: all 0.3s ease;
+            background-image: radial-gradient(var(--ink) 1.2px, transparent 1.2px);
+            background-size: 26px 26px;
+            background-position: -13px -13px;
+            transition: background 0.3s ease, color 0.3s ease;
             min-height: 100vh;
         }
+        a { color: inherit; text-decoration: none; }
+        button { font-family: inherit; cursor: pointer; }
+        ::selection { background: var(--yellow); color: var(--ink); }
 
-        /* ═══════════════════════════════ */
-        /* TOPBAR                         */
-        /* ═══════════════════════════════ */
-        .topbar {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 24px; height: 56px;
-            border-bottom: 2px solid var(--border);
-            background: var(--topbar-bg);
-            backdrop-filter: blur(16px);
-            position: sticky; top: 0; z-index: 1000;
-            transition: all 0.3s ease;
+        /* ══════════════════════════════════════ */
+        /* MARQUEE                               */
+        /* ══════════════════════════════════════ */
+        .marquee {
+            background: var(--ink);
+            color: var(--bg);
+            border-bottom: var(--bd);
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 9px 0;
         }
-        .topbar-left { display: flex; align-items: center; gap: 12px; }
-        .topbar-logo {
-            width: 36px; height: 36px;
-            background: var(--accent); color: #fff;
-            border: 2px solid var(--text);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 16px; font-weight: 900;
-            box-shadow: 2px 2px 0px var(--text);
-            transition: all 0.15s ease;
+        .marquee-track {
+            display: inline-flex;
+            gap: 40px;
+            animation: scroll 22s linear infinite;
+            font-family: var(--mono);
+            font-size: 12.5px;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            padding-left: 40px;
         }
-        .topbar-title { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
-        .topbar-badge {
-            font-size: 11px; font-weight: 600;
-            padding: 3px 10px; border-radius: 4px;
-            background: var(--accent-light); color: var(--accent);
-            border: 1.5px solid var(--accent);
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .topbar-right { display: flex; align-items: center; gap: 10px; }
+        @keyframes scroll { to { transform: translateX(-50%); } }
 
-        /* ── 3D THEME TOGGLE ── */
+        /* ══════════════════════════════════════ */
+        /* HEADER                                */
+        /* ══════════════════════════════════════ */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 14px 26px;
+            background: var(--bg);
+            border-bottom: var(--bd);
+            transition: background 0.3s ease;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--display);
+            font-weight: 800;
+            font-size: 22px;
+            letter-spacing: -0.02em;
+        }
+        .logo-icon {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            background: var(--yellow);
+            border: var(--bd);
+            box-shadow: var(--sh-sm);
+            font-family: var(--display);
+            font-weight: 800;
+            font-size: 18px;
+            transform: rotate(-4deg);
+        }
+        .main-nav {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .main-nav a, .main-nav button {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 14px;
+            border: 2px solid transparent;
+            transition: all 0.15s;
+            background: none;
+            color: var(--ink);
+        }
+        .main-nav a:hover, .main-nav button:hover {
+            border-color: var(--ink);
+            background: var(--paper);
+        }
+        .main-nav a.active {
+            background: var(--violet);
+            color: var(--paper);
+            border-color: var(--ink);
+            box-shadow: var(--sh-sm);
+        }
+
+        /* ── THEME TOGGLE ── */
         .theme-toggle {
-            display: flex; align-items: center;
-            background: var(--card); border: 2px solid var(--text);
-            border-radius: 999px; padding: 3px;
-            cursor: pointer; transition: all 0.2s ease;
-            box-shadow: 2px 2px 0px var(--text);
+            display: flex;
+            align-items: center;
+            background: var(--paper);
+            border: var(--bd);
+            border-radius: 999px;
+            padding: 3px;
+            box-shadow: var(--sh-sm);
+            transition: all 0.15s;
         }
-        .theme-toggle:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--text); }
-        .theme-toggle-btn {
-            width: 30px; height: 28px; border-radius: 999px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 13px; transition: all 0.2s ease;
-            border: none; background: transparent; cursor: pointer;
-            color: var(--text-dim);
-        }
-        .theme-toggle-btn.active { background: var(--accent); color: #fff; font-weight: 700; }
-
-        /* ── 3D BUTTON (topbar links) ── */
-        .btn-3d {
-            font-size: 12px; font-weight: 700;
-            padding: 8px 18px; border-radius: 8px;
-            text-decoration: none; color: var(--text);
-            background: var(--card); border: 2px solid var(--text);
-            box-shadow: var(--shadow-3d);
-            transition: all 0.15s ease;
+        .theme-toggle button {
+            width: 34px;
+            height: 30px;
+            border-radius: 999px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
             cursor: pointer;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            display: inline-flex; align-items: center; gap: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ink);
+            font-family: var(--mono);
+            font-weight: 500;
+            font-size: 11px;
         }
-        .btn-3d:hover { transform: translate(-2px, -2px); box-shadow: var(--shadow-3d-hover); }
-        .btn-3d:active { transform: translate(1px, 1px); box-shadow: var(--shadow-3d-active); }
-
-        .btn-3d-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-        /* ═══════════════════════════════ */
-        /* INTRO SECTION                  */
-        /* ═══════════════════════════════ */
-        .intro-section {
-            max-width: 1200px; margin: 0 auto; padding: 40px 48px 0;
+        .theme-toggle button.active {
+            background: var(--ink);
+            color: var(--bg);
+            font-weight: 700;
         }
-        .intro-card {
-            background: var(--card); border: 2px solid var(--text);
-            border-radius: 12px; padding: 32px;
-            box-shadow: var(--shadow-3d);
-            margin-bottom: 24px;
-            transition: all 0.3s ease;
-        }
-        .intro-card h2 { font-size: 20px; font-weight: 800; margin-bottom: 16px; letter-spacing: -0.02em; }
-        .intro-card p { color: var(--text-dim); font-size: 14px; line-height: 1.7; margin-bottom: 16px; }
 
-        /* ═══════════════════════════════ */
-        /* ACCORDION (shadcn/ui inspired) */
-        /* ═══════════════════════════════ */
-        .accordion { width: 100%; }
-        .accordion-item { border-bottom: 1.5px solid var(--border); }
+        /* ══════════════════════════════════════ */
+        /* HERO                                  */
+        /* ══════════════════════════════════════ */
+        .hero {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 40px 26px 30px;
+        }
+        .hero-sticker {
+            display: inline-block;
+            background: var(--lime);
+            border: var(--bd);
+            box-shadow: var(--sh-sm);
+            font-family: var(--display);
+            font-weight: 800;
+            font-size: 14px;
+            padding: 8px 14px;
+            transform: rotate(-3deg);
+            margin-bottom: 16px;
+        }
+        .hero-title {
+            font-family: var(--display);
+            font-weight: 800;
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            line-height: 0.9;
+            letter-spacing: -0.03em;
+        }
+        .hero-title .outline {
+            color: transparent;
+            -webkit-text-stroke: 2.5px var(--ink);
+        }
+        .hero-sub {
+            margin-top: 16px;
+            font-size: 16px;
+            max-width: 500px;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+        .hero-sub b {
+            background: var(--yellow);
+            padding: 0 4px;
+        }
+
+        /* ══════════════════════════════════════ */
+        /* ALERT                                 */
+        /* ══════════════════════════════════════ */
+        .alert {
+            max-width: 1240px;
+            margin: 0 auto 20px;
+            padding: 0 26px;
+        }
+        .alert-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--paper);
+            border: var(--bd);
+            box-shadow: var(--sh-sm);
+            padding: 16px 20px;
+            font-size: 14px;
+        }
+        .alert-icon {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            margin-top: 1px;
+        }
+        .alert-box b { font-family: var(--display); font-weight: 700; }
+
+        /* ══════════════════════════════════════ */
+        /* ACCORDION                             */
+        /* ══════════════════════════════════════ */
+        .accordion-section {
+            max-width: 1240px;
+            margin: 0 auto 20px;
+            padding: 0 26px;
+        }
+        .accordion {
+            background: var(--paper);
+            border: var(--bd);
+            box-shadow: var(--sh);
+        }
+        .accordion-item { border-bottom: 2px solid var(--ink); }
         .accordion-item:last-child { border-bottom: none; }
         .accordion-trigger {
-            width: 100%; display: flex; align-items: center; justify-content: space-between;
-            padding: 16px 0; background: none; border: none;
-            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600;
-            color: var(--text); cursor: pointer;
-            transition: all 0.2s ease; text-align: left;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: none;
+            border: none;
+            font-family: var(--display);
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--ink);
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: left;
         }
-        .accordion-trigger:hover { color: var(--accent); }
+        .accordion-trigger:hover { background: rgba(139, 92, 246, 0.1); }
         .accordion-trigger .chevron {
-            width: 20px; height: 20px;
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
             transition: transform 0.3s ease;
-            flex-shrink: 0; margin-left: 12px;
-            color: var(--text-dim);
         }
         .accordion-trigger[aria-expanded="true"] .chevron { transform: rotate(180deg); }
         .accordion-content {
@@ -274,242 +400,351 @@ router.get('/', (req, res) => {
             transition: max-height 0.35s ease, padding 0.35s ease;
         }
         .accordion-content.open {
-            max-height: 2000px;
-            padding-bottom: 16px;
+            max-height: 600px;
+            padding: 0 20px 16px;
         }
         .accordion-content-inner {
-            font-size: 13px; line-height: 1.8; color: var(--text-dim);
-            padding-right: 32px;
+            font-size: 13px;
+            line-height: 1.8;
+            opacity: 0.85;
         }
         .accordion-content-inner code {
-            font-family: 'JetBrains Mono', monospace;
-            background: var(--accent-light); color: var(--accent);
-            padding: 2px 8px; border-radius: 4px;
-            font-size: 12px; font-weight: 600;
-            border: 1px solid var(--border);
+            font-family: var(--mono);
+            background: var(--bg);
+            padding: 2px 8px;
+            border: 2px solid var(--ink);
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .accordion-content-inner pre {
+            font-family: var(--mono);
+            background: var(--bg);
+            border: 2px solid var(--ink);
+            padding: 14px;
+            font-size: 11px;
+            overflow-x: auto;
+            margin: 8px 0;
         }
 
-        /* ═══════════════════════════════ */
-        /* REDOC CONTAINER                */
-        /* ═══════════════════════════════ */
-        #redoc-container { max-width: 1200px; margin: 0 auto; padding: 0 48px 48px; }
-        #redoc-container .menu-content { display: none !important; }
+        /* ══════════════════════════════════════ */
+        /* SKELETON LOADING                      */
+        /* ══════════════════════════════════════ */
+        .skeleton-box {
+            max-width: 1240px;
+            margin: 0 auto 20px;
+            padding: 0 26px;
+        }
+        .skeleton {
+            background: var(--paper);
+            border: var(--bd);
+            box-shadow: var(--sh-sm);
+            padding: 20px;
+        }
+        .sk-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .sk-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            border: 3px solid var(--ink);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+        .sk-line {
+            height: 14px;
+            border: 3px solid var(--ink);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        .sk-line.short { width: 60%; }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+
+        /* ══════════════════════════════════════ */
+        /* REDOC CONTAINER                       */
+        /* ══════════════════════════════════════ */
+        #redoc-container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 10px 26px 60px;
+        }
 
         .redoc-wrap { background: transparent !important; }
+        .redoc-wrap .menu-content { display: none !important; }
         .redoc-wrap .api-content {
             background: transparent !important;
             padding: 0 !important;
-            font-family: 'Inter', sans-serif !important;
+            margin-left: 0 !important;
+            max-width: 100% !important;
+            font-family: var(--sans) !important;
         }
         .redoc-wrap .api-content h1 { display: none; }
         .redoc-wrap .api-content h2 {
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 800 !important; font-size: 18px !important;
-            letter-spacing: -0.02em !important; margin: 32px 0 16px !important;
+            font-family: var(--display) !important;
+            font-weight: 800 !important;
+            font-size: 1.6rem !important;
+            letter-spacing: -0.02em !important;
+            margin: 36px 0 18px !important;
             padding: 12px 20px !important;
-            background: var(--card) !important;
-            border: 2px solid var(--text) !important;
-            border-radius: 8px !important;
-            box-shadow: var(--shadow-3d) !important;
-            color: var(--text) !important;
+            background: var(--paper) !important;
+            border: var(--bd) !important;
+            box-shadow: var(--sh-sm) !important;
+            color: var(--ink) !important;
             display: inline-flex !important;
             align-items: center !important;
             gap: 10px !important;
         }
         .redoc-wrap .api-content h3 {
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 700 !important; font-size: 15px !important;
-            margin: 20px 0 8px !important; color: var(--text) !important;
+            font-family: var(--display) !important;
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            margin: 20px 0 8px !important;
+            color: var(--ink) !important;
         }
         .redoc-wrap .api-content p {
-            font-size: 14px !important; line-height: 1.7 !important;
-            color: var(--text-dim) !important;
+            font-size: 14px !important;
+            line-height: 1.7 !important;
         }
 
         /* Operation cards */
         .redoc-wrap .operation {
-            background: var(--card) !important;
-            border: 2px solid var(--border) !important;
-            border-radius: 10px !important;
-            box-shadow: 2px 2px 0px var(--border) !important;
-            margin-bottom: 16px !important; overflow: hidden !important;
-            transition: all 0.2s ease !important;
+            background: var(--paper) !important;
+            border: var(--bd) !important;
+            box-shadow: var(--sh-sm) !important;
+            margin-bottom: 18px !important;
+            overflow: hidden !important;
+            transition: all 0.15s ease !important;
         }
         .redoc-wrap .operation:hover {
-            border-color: var(--text) !important;
-            box-shadow: var(--shadow-3d) !important;
-            transform: translateY(-2px);
+            transform: translate(-3px, -3px);
+            box-shadow: var(--sh) !important;
         }
 
         /* Method badges */
         .redoc-wrap .http-method {
-            font-family: 'JetBrains Mono', monospace !important;
-            font-weight: 800 !important; font-size: 10px !important;
-            padding: 4px 12px !important; border-radius: 4px !important;
-            letter-spacing: 0.5px !important;
-            border: 2px solid #0f172a !important;
-            box-shadow: 1px 1px 0px #0f172a !important;
+            font-family: var(--mono) !important;
+            font-weight: 700 !important;
+            font-size: 10px !important;
+            padding: 4px 12px !important;
+            letter-spacing: 0.05em !important;
+            border: 2.5px solid var(--ink) !important;
+            box-shadow: 2px 2px 0 var(--ink) !important;
         }
-        .redoc-wrap .http-method.get    { background: #dcfce7 !important; color: #166534 !important; }
-        .redoc-wrap .http-method.post   { background: #dbeafe !important; color: #1e40af !important; }
-        .redoc-wrap .http-method.put    { background: #fef3c7 !important; color: #92400e !important; }
-        .redoc-wrap .http-method.delete { background: #fee2e2 !important; color: #991b1b !important; }
+        .redoc-wrap .http-method.get    { background: var(--teal) !important; color: var(--ink) !important; }
+        .redoc-wrap .http-method.post   { background: var(--violet) !important; color: #fff !important; }
+        .redoc-wrap .http-method.put    { background: var(--yellow) !important; color: var(--ink) !important; }
+        .redoc-wrap .http-method.delete { background: var(--pink) !important; color: #fff !important; }
 
         /* Code */
         .redoc-wrap code, .redoc-wrap pre {
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 12px !important; font-weight: 500 !important;
-            background: var(--accent-light) !important;
-            border: 1px solid var(--border) !important;
-            border-radius: 6px !important; padding: 3px 8px !important;
+            font-family: var(--mono) !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            background: var(--bg) !important;
+            border: 2px solid var(--ink) !important;
+            padding: 3px 8px !important;
         }
         .redoc-wrap pre { padding: 16px !important; }
 
         /* Auth button */
         .redoc-wrap .auth-button {
-            font-family: 'Inter', sans-serif !important;
-            font-weight: 700 !important; font-size: 13px !important;
-            padding: 10px 20px !important; border-radius: 8px !important;
-            background: var(--card) !important; color: var(--text) !important;
-            border: 2px solid var(--text) !important;
-            box-shadow: var(--shadow-3d) !important;
-            cursor: pointer !important; transition: all 0.15s ease !important;
-            text-transform: uppercase !important; letter-spacing: 0.5px !important;
+            font-family: var(--display) !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            padding: 10px 22px !important;
+            background: var(--pink) !important;
+            color: var(--ink) !important;
+            border: var(--bd) !important;
+            box-shadow: var(--sh-sm) !important;
+            cursor: pointer !important;
+            transition: all 0.12s !important;
+            letter-spacing: 0.04em !important;
         }
         .redoc-wrap .auth-button:hover {
             transform: translate(-2px, -2px);
-            box-shadow: var(--shadow-3d-hover) !important;
+            box-shadow: var(--sh) !important;
+        }
+
+        /* Inputs */
+        .redoc-wrap input, .redoc-wrap textarea, .redoc-wrap select {
+            font-family: var(--mono) !important;
+            font-size: 13px !important;
+            border: var(--bd) !important;
+            padding: 10px 12px !important;
+            background: var(--paper) !important;
+            color: var(--ink) !important;
+            outline: none !important;
+        }
+        .redoc-wrap input:focus, .redoc-wrap textarea:focus {
+            box-shadow: var(--sh-sm) !important;
+            transform: translate(-1px, -1px) !important;
         }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; border: 2px solid var(--bg); }
-        ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+        ::-webkit-scrollbar-thumb { background: var(--ink); border: 2px solid var(--bg); }
+        ::-webkit-scrollbar-thumb:hover { background: var(--violet); }
 
         /* Hide Redoc sidebar */
         .redoc-wrap > div:first-child { display: none !important; }
-        .redoc-wrap .menu-content { display: none !important; }
-        .redoc-wrap .api-content { margin-left: 0 !important; max-width: 100% !important; }
+
+        /* ══════════════════════════════════════ */
+        /* RESPONSIVE                            */
+        /* ══════════════════════════════════════ */
+        @media (max-width: 560px) {
+            .marquee-track { font-size: 11px; }
+            .site-header { padding: 12px 16px; }
+            .hero { padding: 28px 16px 20px; }
+            .hero-title { font-size: 2.2rem; }
+            .accordion-section, .alert, .skeleton-box { padding: 0 16px; }
+            #redoc-container { padding: 10px 16px 48px; }
+        }
     </style>
 </head>
 <body>
-    <!-- ═══════════════════════════════ -->
-    <!-- TOPBAR                          -->
-    <!-- ═══════════════════════════════ -->
-    <div class="topbar">
-        <div class="topbar-left">
-            <div class="topbar-logo">A</div>
-            <span class="topbar-title">API Absensi Sekolah</span>
-            <span class="topbar-badge">v${packageInfo.version || '2.0.0'}</span>
-        </div>
-        <div class="topbar-right">
-            <div class="theme-toggle" id="themeToggle">
-                <button class="theme-toggle-btn active" data-theme="dark">DARK</button>
-                <button class="theme-toggle-btn" data-theme="light">LIGHT</button>
-            </div>
-            <a href="/api/docs/json" target="_blank" class="btn-3d">JSON</a>
-            <a href="/api/docs/download" target="_blank" class="btn-3d">DOWNLOAD</a>
-            <a href="/api/health" target="_blank" class="btn-3d btn-3d-primary">HEALTH</a>
+    <!-- MARQUEE -->
+    <div class="marquee">
+        <div class="marquee-track">
+            <span>API ABSENSI SEKOLAH v${packageInfo.version || '2.0.0'}</span>
+            <span>QR CODE</span>
+            <span>WHATSAPP BOT</span>
+            <span>GOOGLE SHEETS</span>
+            <span>MONITORING REALTIME</span>
+            <span>EXPORT EXCEL</span>
+            <span>IZIN & SAKIT</span>
+            <span>PENGUMUMAN</span>
+            <span>CHANNEL BERITA</span>
+            <span>API ABSENSI SEKOLAH v${packageInfo.version || '2.0.0'}</span>
+            <span>QR CODE</span>
+            <span>WHATSAPP BOT</span>
+            <span>GOOGLE SHEETS</span>
+            <span>MONITORING REALTIME</span>
+            <span>EXPORT EXCEL</span>
+            <span>IZIN & SAKIT</span>
+            <span>PENGUMUMAN</span>
+            <span>CHANNEL BERITA</span>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════ -->
-    <!-- INTRO ACCORDION                 -->
-    <!-- ═══════════════════════════════ -->
-    <div class="intro-section">
-        <div class="intro-card">
-            <h2>📚 Dokumentasi API Absensi Sekolah</h2>
-            <p>Sistem absensi berbasis <strong>QR Code</strong>, <strong>WhatsApp Bot</strong>, dan <strong>Google Sheets</strong>. Gunakan token JWT untuk mengakses endpoint.</p>
+    <!-- HEADER -->
+    <header class="site-header">
+        <div class="logo">
+            <div class="logo-icon">A</div>
+            <span>Absensi API</span>
+        </div>
+        <nav class="main-nav">
+            <a href="#docs" class="active">Docs</a>
+            <a href="/api/docs/json" target="_blank">JSON</a>
+            <a href="/api/docs/download" target="_blank">Download</a>
+            <a href="/api/health" target="_blank">Health</a>
+            <div class="theme-toggle" id="themeToggle">
+                <button data-theme="dark" class="active">DARK</button>
+                <button data-theme="light">LIGHT</button>
+            </div>
+        </nav>
+    </header>
 
-            <!-- ── ACCORDION ── -->
-            <div class="accordion">
-                <div class="accordion-item">
-                    <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
-                        <span>Cara Mendapatkan Token</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <p>1. Buka endpoint <code>POST /api/auth/login</code></p>
-                            <p>2. Isi body:</p>
-                            <pre><code>{
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-sticker">v${packageInfo.version || '2.0.0'}</div>
+        <h1 class="hero-title">
+            <span class="outline">API</span><br>Absensi<br>Sekolah
+        </h1>
+        <p class="hero-sub">
+            Backend API untuk sistem absensi berbasis <b>QR Code</b>, <b>WhatsApp Bot</b>, dan <b>Google Sheets</b>.
+            Dibangun dengan Express.js + JWT Authentication.
+        </p>
+    </section>
+
+    <!-- ALERT -->
+    <div class="alert">
+        <div class="alert-box">
+            <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <div>
+                <b>Autentikasi:</b> Login di <code>POST /api/auth/login</code>, copy token, lalu klik <b>Authorize</b> di sidebar. Format: <code>Bearer &lt;token&gt;</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCORDION -->
+    <div class="accordion-section">
+        <div class="accordion">
+            <div class="accordion-item">
+                <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
+                    <span>Cara Mendapatkan Token</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p>1. Buka endpoint <code>POST /api/auth/login</code></p>
+                        <p>2. Isi body (Admin):</p>
+                        <pre><code>{
   "username": "admin",
   "password": "admin123"
 }</code></pre>
-                            <p>3. Copy <code>token</code> dari response</p>
-                            <p>4. Klik tombol <strong>Authorize</strong> lalu paste: <code>Bearer &lt;token&gt;</code></p>
-                        </div>
+                        <p>3. Atau login sebagai Siswa:</p>
+                        <pre><code>{
+  "nisn": "1234567890"
+}</code></pre>
+                        <p>4. Copy <code>token</code> dari response</p>
+                        <p>5. Klik <b>Authorize</b> → paste: <code>Bearer &lt;token&gt;</code></p>
                     </div>
                 </div>
+            </div>
 
-                <div class="accordion-item">
-                    <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
-                        <span>Role & Hak Akses</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <p><strong>Admin</strong> — Akses penuh ke semua endpoint</p>
-                            <p><strong>Guru</strong> — Monitoring, rekap, pengumuman, approve izin</p>
-                            <p><strong>Siswa</strong> — Absen, ajukan izin/sakit, feedback</p>
-                        </div>
+            <div class="accordion-item">
+                <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
+                    <span>Role & Hak Akses</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p><b>Admin</b> — Akses penuh: CRUD siswa/guru, config, export, logs</p>
+                        <p><b>Guru</b> — Monitoring, rekap, approve izin, pengumuman</p>
+                        <p><b>Siswa</b> — Absen, ajukan izin/sakit, feedback, cek notifikasi</p>
                     </div>
                 </div>
+            </div>
 
-                <div class="accordion-item">
-                    <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
-                        <span>Format Tanggal</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <p>Semua tanggal menggunakan format <code>YYYY-MM-DD</code></p>
-                            <p>Contoh: <code>2025-01-15</code> untuk 15 Januari 2025</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
-                        <span>Error Codes</span>
-                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </button>
-                    <div class="accordion-content">
-                        <div class="accordion-content-inner">
-                            <p><code>200</code> — Success</p>
-                            <p><code>400</code> — Bad Request</p>
-                            <p><code>401</code> — Unauthorized (token invalid/expired)</p>
-                            <p><code>403</code> — Forbidden (role tidak punya akses)</p>
-                            <p><code>404</code> — Not Found</p>
-                            <p><code>429</code> — Rate Limit</p>
-                            <p><code>500</code> — Internal Server Error</p>
-                        </div>
+            <div class="accordion-item">
+                <button class="accordion-trigger" aria-expanded="false" onclick="toggleAccordion(this)">
+                    <span>Format Tanggal & Error Codes</span>
+                    <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <p><b>Format Tanggal:</b> <code>YYYY-MM-DD</code> (contoh: <code>2025-01-15</code>)</p>
+                        <br>
+                        <p><code>200</code> Success | <code>400</code> Bad Request | <code>401</code> Unauthorized</p>
+                        <p><code>403</code> Forbidden | <code>404</code> Not Found | <code>429</code> Rate Limit</p>
+                        <p><code>500</code> Internal Server Error</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ═══════════════════════════════ -->
-    <!-- REDOC                           -->
-    <!-- ═══════════════════════════════ -->
+    <!-- REDOC -->
     <div id="redoc-container"></div>
 
     <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
     <script>
         // ═══════════════════════════════
-        // ACCORDION LOGIC
+        // ACCORDION
         // ═══════════════════════════════
         function toggleAccordion(trigger) {
             const content = trigger.nextElementSibling;
             const isOpen = content.classList.contains('open');
-            
-            // Close all
             document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('open'));
             document.querySelectorAll('.accordion-trigger').forEach(t => t.setAttribute('aria-expanded', 'false'));
-            
-            // Open clicked (if not already open)
             if (!isOpen) {
                 content.classList.add('open');
                 trigger.setAttribute('aria-expanded', 'true');
@@ -520,8 +755,7 @@ router.get('/', (req, res) => {
         // THEME TOGGLE
         // ═══════════════════════════════
         const html = document.documentElement;
-        const toggleBtns = document.querySelectorAll('.theme-toggle-btn');
-        
+        const toggleBtns = document.querySelectorAll('#themeToggle button');
         const savedTheme = localStorage.getItem('api-docs-theme') || 'dark';
         html.className = savedTheme;
         updateToggleButtons(savedTheme);
@@ -547,7 +781,7 @@ router.get('/', (req, res) => {
         Redoc.init(
             ${specJson},
             {
-                scrollYOffset: 80,
+                scrollYOffset: 70,
                 hideDownloadButton: true,
                 expandResponses: "200",
                 nativeScrollbars: true,
@@ -560,9 +794,9 @@ router.get('/', (req, res) => {
                     typography: {
                         fontSize: '14px',
                         lineHeight: '1.6',
-                        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-                        headings: { fontFamily: "'Inter', sans-serif", fontWeight: '700' },
-                        code: { fontSize: '12px', fontFamily: "'JetBrains Mono', monospace", fontWeight: '500' }
+                        fontFamily: "'Space Grotesk', system-ui, sans-serif",
+                        headings: { fontFamily: "'Syne', sans-serif", fontWeight: '800' },
+                        code: { fontSize: '12px', fontFamily: "'DM Mono', monospace", fontWeight: '500' }
                     },
                     sidebar: { width: '0px' }
                 }
