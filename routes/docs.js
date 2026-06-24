@@ -1314,11 +1314,6 @@ button { font-family: inherit; cursor: pointer; }
   color: var(--ink);
 }
 
-.accordion-trigger.open .badge {
-  background: var(--lime);
-  color: var(--ink);
-}
-
 .accordion-content {
   overflow: hidden;
   max-height: 0;
@@ -1403,32 +1398,6 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 600;
 }
 
-.ep-try-btn {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 10px;
-  letter-spacing: .05em;
-  padding: 6px 14px;
-  background: var(--lime);
-  border: 2px solid var(--ink);
-  box-shadow: 2px 2px 0 var(--ink);
-  cursor: pointer;
-  transition: all .12s;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ep-try-btn:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-
-.ep-try-btn.loading {
-  opacity: .6;
-  pointer-events: none;
-}
-
 .ep-sample {
   font-family: var(--mono);
   font-size: 11px;
@@ -1439,45 +1408,6 @@ button { font-family: inherit; cursor: pointer; }
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-.ep-result {
-  margin-top: 8px;
-  display: none;
-}
-
-.ep-result.show { display: block; }
-
-.ep-result-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.ep-result-status {
-  padding: 2px 8px;
-  border: 2px solid var(--ink);
-  font-weight: 700;
-}
-
-.ep-result-status.success { background: var(--teal); color: var(--ink); }
-.ep-result-status.error { background: var(--pink); color: var(--ink); }
-
-.ep-result-body {
-  font-family: var(--mono);
-  font-size: 11px;
-  background: var(--bg);
-  border: 2px solid var(--ink);
-  padding: 10px 12px;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 300px;
-  overflow-y: auto;
 }
 
 /* ===== TOKEN BAR ===== */
@@ -1833,9 +1763,6 @@ function buildScript(specJson) {
   var BASE = "${BASE_URL}";
   var FE = "${FRONTEND_URL}";
 
-  console.log('API Docs initialized');
-  console.log('Base URL:', BASE);
-
   // ===== TOKEN MANAGEMENT =====
   var token = localStorage.getItem("api-token") || "";
   document.getElementById("globalToken").value = token;
@@ -1997,7 +1924,7 @@ function buildScript(specJson) {
       var desc = (ep.summary || "") +
         (ep.description ? " - " + ep.description.replace(/\\*\\*/g, "").replace(/\\n/g, " ") : "");
 
-      // Card HTML
+      // Card HTML - TANPA TRY IT BUTTON
       card.innerHTML =
         '<div class="ep-head">' +
         '<div class="ep-head-left">' +
@@ -2005,36 +1932,12 @@ function buildScript(specJson) {
         '<span class="ep-path">' + ep.path + '</span>' +
         authBadge +
         '</div>' +
-        '<button class="ep-try-btn" id="try-' + epId + '">TRY IT</button>' +
         '</div>' +
         '<div class="ep-desc">' + desc + '</div>' +
         pathParams +
-        sampleHTML +
-        '<div class="ep-result" id="result-' + epId + '">' +
-        '<div class="ep-result-header">' +
-        '<span class="ep-result-status" id="status-' + epId + '"></span>' +
-        '<span id="time-' + epId + '" style="opacity:.6"></span>' +
-        '</div>' +
-        '<pre class="ep-result-body" id="body-' + epId + '"></pre>' +
-        '</div>';
+        sampleHTML;
 
       inner.appendChild(card);
-
-      // Bind TRY IT button
-      setTimeout(function() {
-        var btn = document.getElementById("try-" + epId);
-        if (!btn) return;
-
-        btn.addEventListener("click", function() {
-          executeEndpoint(
-            epId,
-            ep.method,
-            ep.path,
-            sampleObj,
-            !!(ep.security && ep.security.length > 0)
-          );
-        });
-      }, 10);
     });
 
     content.appendChild(inner);
@@ -2042,154 +1945,6 @@ function buildScript(specJson) {
     item.appendChild(content);
     accordionContainer.appendChild(item);
   });
-
-  // ===== EXECUTE ENDPOINT =====
-  function executeEndpoint(epId, method, path, sampleObj, needsAuth) {
-    var resultDiv = document.getElementById("result-" + epId);
-    var statusEl = document.getElementById("status-" + epId);
-    var bodyEl = document.getElementById("body-" + epId);
-    var timeEl = document.getElementById("time-" + epId);
-    var btn = document.getElementById("try-" + epId);
-
-    if (!resultDiv || !statusEl || !bodyEl || !btn) {
-      console.error("Element not found for:", epId);
-      return;
-    }
-
-    // Show result area
-    resultDiv.classList.add("show");
-    statusEl.textContent = "Loading...";
-    statusEl.className = "ep-result-status";
-    bodyEl.textContent = "Fetching...";
-    timeEl.textContent = "";
-    btn.classList.add("loading");
-    btn.textContent = "...";
-
-    // Build URL
-    var url = BASE + path;
-
-    // Replace path params
-    var pathParams = path.match(/\\{[^}]+\\}/g);
-    if (pathParams) {
-      pathParams.forEach(function(p) {
-        var paramName = p.replace(/[{}]/g, "");
-        var val = prompt("Masukkan nilai untuk " + paramName + ":", "");
-        if (val && val.trim() !== "") {
-          url = url.replace(p, encodeURIComponent(val.trim()));
-        } else {
-          url = url.replace(p, paramName);
-        }
-      });
-    }
-
-    console.log("Fetching:", method, url);
-
-    var startTime = Date.now();
-
-    // Headers
-    var headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json"
-    };
-
-    if (needsAuth && token) {
-      headers["Authorization"] = "Bearer " + token;
-    }
-
-    // Fetch options
-    var fetchOptions = {
-      method: method,
-      headers: headers,
-      mode: "cors",
-      credentials: "include"
-    };
-
-    if (method !== "GET" && method !== "HEAD" && sampleObj) {
-      fetchOptions.body = JSON.stringify(sampleObj);
-      console.log("Request Body:", fetchOptions.body);
-    }
-
-    // Execute fetch
-    fetch(url, fetchOptions)
-      .then(function(response) {
-        console.log("Response status:", response.status);
-
-        // Read response based on content type
-        var contentType = response.headers.get("content-type") || "";
-
-        if (contentType.includes("application/json")) {
-          return response.json().then(function(data) {
-            return {
-              status: response.status,
-              ok: response.ok,
-              body: JSON.stringify(data, null, 2),
-              contentType: "json"
-            };
-          });
-        } else if (contentType.includes("text/")) {
-          return response.text().then(function(data) {
-            return {
-              status: response.status,
-              ok: response.ok,
-              body: data,
-              contentType: "text"
-            };
-          });
-        } else {
-          return response.text().then(function(data) {
-            // Try to parse as JSON first
-            try {
-              var parsed = JSON.parse(data);
-              return {
-                status: response.status,
-                ok: response.ok,
-                body: JSON.stringify(parsed, null, 2),
-                contentType: "json"
-              };
-            } catch (e) {
-              return {
-                status: response.status,
-                ok: response.ok,
-                body: data,
-                contentType: "text"
-              };
-            }
-          });
-        }
-      })
-      .then(function(result) {
-        var elapsed = Date.now() - startTime;
-
-        statusEl.textContent = result.status + " " + (result.ok ? "OK" : "Error");
-        statusEl.className = "ep-result-status " + (result.ok ? "success" : "error");
-        bodyEl.textContent = result.body;
-        timeEl.textContent = elapsed + "ms";
-
-        btn.classList.remove("loading");
-        btn.textContent = "TRY IT";
-
-        console.log("Response:", result.body);
-      })
-      .catch(function(err) {
-        console.error("Fetch error:", err);
-        var elapsed = Date.now() - startTime;
-
-        statusEl.textContent = "Failed to fetch";
-        statusEl.className = "ep-result-status error";
-        bodyEl.textContent = "Error: " + err.message + "\\n\\n" +
-          "URL: " + url + "\\n" +
-          "Make sure the server is running and CORS is enabled.\\n\\n" +
-          "Possible solutions:\\n" +
-          "1. Check if server is running\\n" +
-          "2. Enable CORS on the server\\n" +
-          "3. Check network connection\\n" +
-          "4. Verify the URL is correct: " + BASE;
-        timeEl.textContent = elapsed + "ms";
-
-        btn.classList.remove("loading");
-        btn.textContent = "TRY IT";
-      });
-  }
 
   // ===== TOGGLE ACCORDION =====
   function toggleAccordion(trigger) {
