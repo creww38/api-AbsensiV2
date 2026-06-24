@@ -8,7 +8,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://absensi-v3-kappa.verce
 const THUMBNAIL_URL = "https://www.image2url.com/r2/default/gifs/1782184371933-fc0a347c-c857-48c3-8127-cf0790d7f7b0.gif";
 
 const SOCIALS = {
-  instagram: 'https://instagram.com/creww38',
+  instagram: 'https://instagram.com/creww_38',
   youtube: 'https://youtube.com/@creww38',
   tiktok: 'https://tiktok.com/@creww38',
   github: 'https://github.com/Creww38/Api-Absensiv2',
@@ -1833,6 +1833,9 @@ function buildScript(specJson) {
   var BASE = "${BASE_URL}";
   var FE = "${FRONTEND_URL}";
 
+  console.log('API Docs initialized');
+  console.log('Base URL:', BASE);
+
   // ===== TOKEN MANAGEMENT =====
   var token = localStorage.getItem("api-token") || "";
   document.getElementById("globalToken").value = token;
@@ -1967,7 +1970,7 @@ function buildScript(specJson) {
 
         if (example) {
           sampleObj = example;
-          sampleHTML = '<div class="ep-sample"><strong>Request:</strong>\\n' +
+          sampleHTML = '<div class="ep-sample"><strong>Request Body:</strong>\\n' +
             JSON.stringify(example, null, 2) + '</div>';
         }
       }
@@ -2048,14 +2051,21 @@ function buildScript(specJson) {
     var timeEl = document.getElementById("time-" + epId);
     var btn = document.getElementById("try-" + epId);
 
+    if (!resultDiv || !statusEl || !bodyEl || !btn) {
+      console.error("Element not found for:", epId);
+      return;
+    }
+
+    // Show result area
     resultDiv.classList.add("show");
-    statusEl.textContent = "...";
+    statusEl.textContent = "Loading...";
     statusEl.className = "ep-result-status";
-    bodyEl.textContent = "Loading...";
+    bodyEl.textContent = "Fetching...";
     timeEl.textContent = "";
     btn.classList.add("loading");
     btn.textContent = "...";
 
+    // Build URL
     var url = BASE + path;
 
     // Replace path params
@@ -2063,66 +2073,122 @@ function buildScript(specJson) {
     if (pathParams) {
       pathParams.forEach(function(p) {
         var paramName = p.replace(/[{}]/g, "");
-        var val = prompt("Masukkan " + paramName + ":", "");
-        if (val) {
-          url = url.replace(p, val);
+        var val = prompt("Masukkan nilai untuk " + paramName + ":", "");
+        if (val && val.trim() !== "") {
+          url = url.replace(p, encodeURIComponent(val.trim()));
         } else {
           url = url.replace(p, paramName);
         }
       });
     }
 
+    console.log("Fetching:", method, url);
+
     var startTime = Date.now();
 
-    try {
-      var headers = { "Content-Type": "application/json" };
-      if (needsAuth && token) {
-        headers["Authorization"] = "Bearer " + token;
-      }
+    // Headers
+    var headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json"
+    };
 
-      var fetchOptions = {
-        method: method,
-        headers: headers
-      };
-
-      if (method !== "GET" && method !== "HEAD" && sampleObj) {
-        fetchOptions.body = JSON.stringify(sampleObj);
-      }
-
-      fetch(url, fetchOptions)
-        .then(function(response) {
-          return response.text().then(function(text) {
-            var formatted;
-            try {
-              formatted = JSON.stringify(JSON.parse(text), null, 2);
-            } catch (e) {
-              formatted = text;
-            }
-
-            statusEl.textContent = response.status + " " + (response.ok ? "OK" : "ERR");
-            statusEl.className = "ep-result-status " + (response.ok ? "success" : "error");
-            bodyEl.textContent = formatted;
-            timeEl.textContent = (Date.now() - startTime) + "ms";
-            btn.classList.remove("loading");
-            btn.textContent = "TRY IT";
-          });
-        })
-        .catch(function(err) {
-          statusEl.textContent = "ERR";
-          statusEl.className = "ep-result-status error";
-          bodyEl.textContent = err.message;
-          timeEl.textContent = (Date.now() - startTime) + "ms";
-          btn.classList.remove("loading");
-          btn.textContent = "TRY IT";
-        });
-
-    } catch (err) {
-      statusEl.textContent = "ERR";
-      statusEl.className = "ep-result-status error";
-      bodyEl.textContent = err.message;
-      btn.classList.remove("loading");
-      btn.textContent = "TRY IT";
+    if (needsAuth && token) {
+      headers["Authorization"] = "Bearer " + token;
     }
+
+    // Fetch options
+    var fetchOptions = {
+      method: method,
+      headers: headers,
+      mode: "cors",
+      credentials: "include"
+    };
+
+    if (method !== "GET" && method !== "HEAD" && sampleObj) {
+      fetchOptions.body = JSON.stringify(sampleObj);
+      console.log("Request Body:", fetchOptions.body);
+    }
+
+    // Execute fetch
+    fetch(url, fetchOptions)
+      .then(function(response) {
+        console.log("Response status:", response.status);
+
+        // Read response based on content type
+        var contentType = response.headers.get("content-type") || "";
+
+        if (contentType.includes("application/json")) {
+          return response.json().then(function(data) {
+            return {
+              status: response.status,
+              ok: response.ok,
+              body: JSON.stringify(data, null, 2),
+              contentType: "json"
+            };
+          });
+        } else if (contentType.includes("text/")) {
+          return response.text().then(function(data) {
+            return {
+              status: response.status,
+              ok: response.ok,
+              body: data,
+              contentType: "text"
+            };
+          });
+        } else {
+          return response.text().then(function(data) {
+            // Try to parse as JSON first
+            try {
+              var parsed = JSON.parse(data);
+              return {
+                status: response.status,
+                ok: response.ok,
+                body: JSON.stringify(parsed, null, 2),
+                contentType: "json"
+              };
+            } catch (e) {
+              return {
+                status: response.status,
+                ok: response.ok,
+                body: data,
+                contentType: "text"
+              };
+            }
+          });
+        }
+      })
+      .then(function(result) {
+        var elapsed = Date.now() - startTime;
+
+        statusEl.textContent = result.status + " " + (result.ok ? "OK" : "Error");
+        statusEl.className = "ep-result-status " + (result.ok ? "success" : "error");
+        bodyEl.textContent = result.body;
+        timeEl.textContent = elapsed + "ms";
+
+        btn.classList.remove("loading");
+        btn.textContent = "TRY IT";
+
+        console.log("Response:", result.body);
+      })
+      .catch(function(err) {
+        console.error("Fetch error:", err);
+        var elapsed = Date.now() - startTime;
+
+        statusEl.textContent = "Failed to fetch";
+        statusEl.className = "ep-result-status error";
+        bodyEl.textContent = "Error: " + err.message + "\\n\\n" +
+          "URL: " + url + "\\n" +
+          "Make sure the server is running and CORS is enabled.\\n\\n" +
+          "Possible solutions:\\n" +
+          "1. Check if server is running\\n" +
+          "2. Enable CORS on the server\\n" +
+          "3. Check network connection\\n" +
+          "4. Verify the URL is correct: " + BASE;
+        timeEl.textContent = elapsed + "ms";
+
+        btn.classList.remove("loading");
+        btn.textContent = "TRY IT";
+      });
   }
 
   // ===== TOGGLE ACCORDION =====
